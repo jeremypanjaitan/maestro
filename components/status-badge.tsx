@@ -1,7 +1,8 @@
-import type { PayrollStatus, SessionStatus } from "@prisma/client";
+import type { ClassType, PayrollStatus, SessionStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import {
+  CLASS_TYPE_LABELS,
   PAYROLL_STATUS_LABELS,
   SESSION_STATUS_LABELS,
 } from "@/lib/domain/constants";
@@ -95,6 +96,27 @@ export function PayrollStatusBadge({
     <StatusBadge
       label={PAYROLL_STATUS_LABELS[status]}
       tone={PAYROLL_STATUS_TONE[status]}
+      className={className}
+    />
+  );
+}
+
+const CLASS_TYPE_TONE: Record<ClassType, StatusTone> = {
+  PRIVATE: "outline",
+  GROUP: "blue",
+};
+
+export function ClassTypeBadge({
+  classType,
+  className,
+}: {
+  classType: ClassType;
+  className?: string;
+}) {
+  return (
+    <StatusBadge
+      label={CLASS_TYPE_LABELS[classType]}
+      tone={CLASS_TYPE_TONE[classType]}
       className={className}
     />
   );

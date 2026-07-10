@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { SessionStatus } from "@prisma/client";
+import type { ClassType, SessionStatus } from "@prisma/client";
 import { MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 import { cancelSession, updateSessionStatus } from "@/lib/actions/session";
 import { DAY_LABELS } from "@/lib/validations/schedule";
 import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
+import { formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SessionStatusBadge } from "@/components/status-badge";
+import { ClassTypeBadge, SessionStatusBadge } from "@/components/status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +54,8 @@ export type SessionRecord = {
   durationMinutes: number;
   status: SessionStatus;
   instrument: string;
+  classType: ClassType;
+  rate: number;
   teacher: { id: string; name: string };
   student: { id: string; name: string };
 };
@@ -194,6 +197,8 @@ export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
                   <TableHead>Guru</TableHead>
                   <TableHead>Murid</TableHead>
                   <TableHead>Instrumen</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead className="text-right">Tarif</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -201,7 +206,7 @@ export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground">
                       Belum ada sesi untuk filter ini.
                     </TableCell>
                   </TableRow>
@@ -214,6 +219,10 @@ export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
                       <TableCell className="font-medium">{session.teacher.name}</TableCell>
                       <TableCell>{session.student.name}</TableCell>
                       <TableCell>{session.instrument}</TableCell>
+                      <TableCell>
+                        <ClassTypeBadge classType={session.classType} />
+                      </TableCell>
+                      <TableCell className="text-right">{formatRupiah(session.rate)}</TableCell>
                       <TableCell>
                         <SessionStatusBadge status={session.status} />
                       </TableCell>

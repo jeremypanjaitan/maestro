@@ -40,6 +40,8 @@ export default async function AdminSessionsPage() {
     durationMinutes: session.durationMinutes,
     status: session.status,
     instrument: session.schedule?.instrument ?? session.student.instrument,
+    classType: session.classType,
+    rate: session.rate,
     teacher: session.teacher,
     student: { id: session.student.id, name: session.student.name },
   }));

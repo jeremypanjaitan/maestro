@@ -1,4 +1,4 @@
-import type { SessionStatus } from "@prisma/client";
+import type { ClassType, SessionStatus } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +12,8 @@ export type CalendarSession = {
   durationMinutes: number;
   status: SessionStatus;
   instrument: string;
+  classType: ClassType;
+  rate: number;
   teacher: { id: string; name: string };
   student: { id: string; name: string };
 };
@@ -86,6 +88,8 @@ export async function getCalendarSessions({
     durationMinutes: s.durationMinutes,
     status: s.status,
     instrument: s.schedule?.instrument ?? s.student.instrument,
+    classType: s.classType,
+    rate: s.rate,
     teacher: { id: s.teacher.id, name: s.teacher.name },
     student: { id: s.student.id, name: s.student.name },
   }));

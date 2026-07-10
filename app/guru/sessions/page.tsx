@@ -1,9 +1,11 @@
 import Link from "next/link";
 
 import { getGuruSessions } from "@/lib/queries/calendar";
+import { formatRupiah } from "@/lib/utils";
 import { AttendanceControls } from "@/components/attendance-controls";
 import { PageHeader } from "@/components/page-header";
 import { RescheduleDialog } from "@/components/reschedule-dialog";
+import { ClassTypeBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -37,6 +39,8 @@ export default async function GuruSessionsPage() {
                   <TableHead>Jam</TableHead>
                   <TableHead>Murid</TableHead>
                   <TableHead>Instrumen</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead className="text-right">Tarif</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -44,7 +48,7 @@ export default async function GuruSessionsPage() {
               <TableBody>
                 {sessions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       Belum ada sesi pada rentang ini.
                     </TableCell>
                   </TableRow>
@@ -57,6 +61,10 @@ export default async function GuruSessionsPage() {
                         <TableCell>{session.startTime}</TableCell>
                         <TableCell className="font-medium">{session.student.name}</TableCell>
                         <TableCell>{session.instrument}</TableCell>
+                        <TableCell>
+                          <ClassTypeBadge classType={session.classType} />
+                        </TableCell>
+                        <TableCell className="text-right">{formatRupiah(session.rate)}</TableCell>
                         <TableCell>
                           <AttendanceControls sessionId={session.id} status={session.status} />
                         </TableCell>

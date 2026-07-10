@@ -119,7 +119,17 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{formatRupiah(teacher.ratePerSession)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col text-sm">
+                          <span>Privat: {formatRupiah(teacher.ratePerSession)}</span>
+                          <span className="text-muted-foreground">
+                            Grup:{" "}
+                            {teacher.defaultGroupRate != null
+                              ? formatRupiah(teacher.defaultGroupRate)
+                              : "-"}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>{teacher.phone ?? "-"}</TableCell>
                       <TableCell>
                         <Badge variant={teacher.status === "ACTIVE" ? "default" : "outline"}>

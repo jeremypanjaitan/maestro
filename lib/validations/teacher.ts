@@ -26,7 +26,7 @@ const ratePerSession = z.coerce
 const defaultGroupRate = z.coerce
   .number()
   .int("Tarif grup harus bilangan bulat")
-  .positive("Tarif grup harus lebih dari 0")
+  .min(0, "Tarif grup tidak boleh negatif")
   .optional();
 
 const phone = z

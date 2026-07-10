@@ -3,9 +3,10 @@ import { Download } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { formatDbDate } from "@/lib/domain/dbDate";
+import { getMeetingNumbersForTeacher } from "@/lib/queries/payroll";
 import { formatPeriod, formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
-import { PayrollStatusBadge } from "@/components/status-badge";
+import { ClassTypeBadge, PayrollStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -32,7 +33,14 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
       items: {
         include: {
           session: {
-            select: { date: true, startTime: true, student: { select: { name: true } } },
+            select: {
+              id: true,
+              date: true,
+              startTime: true,
+              classType: true,
+              student: { select: { name: true, instrument: true } },
+              schedule: { select: { instrument: true } },
+            },
           },
         },
         orderBy: { session: { date: "asc" } },
@@ -45,6 +53,11 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
   }
 
   const period = formatPeriod(payroll.periodMonth, payroll.periodYear);
+
+  // Meeting numbers ("pertemuan ke-N") must be computed against the
+  // teacher's FULL session history, not just this payroll's items — see
+  // `getMeetingNumbersForTeacher`.
+  const meetingNumbers = await getMeetingNumbersForTeacher(payroll.teacherId);
 
   return (
     <div className="space-y-6">
@@ -98,34 +111,51 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">No</TableHead>
                   <TableHead>Tanggal</TableHead>
-                  <TableHead>Jam</TableHead>
                   <TableHead>Murid</TableHead>
+                  <TableHead>Instrumen</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead>Pertemuan ke-N</TableHead>
                   <TableHead className="text-right">Tarif</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payroll.items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       Tidak ada sesi HADIR pada periode ini.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  payroll.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{formatDbDate(item.session.date)}</TableCell>
-                      <TableCell>{item.session.startTime}</TableCell>
-                      <TableCell>{item.session.student.name}</TableCell>
-                      <TableCell className="text-right">{formatRupiah(item.rate)}</TableCell>
-                    </TableRow>
-                  ))
+                  payroll.items.map((item, index) => {
+                    const meetingNumber = meetingNumbers.get(item.session.id);
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          {formatDbDate(item.session.date)} · {item.session.startTime}
+                        </TableCell>
+                        <TableCell className="font-medium">{item.session.student.name}</TableCell>
+                        <TableCell>
+                          {item.session.schedule?.instrument ?? item.session.student.instrument}
+                        </TableCell>
+                        <TableCell>
+                          <ClassTypeBadge classType={item.session.classType} />
+                        </TableCell>
+                        <TableCell>
+                          {meetingNumber != null ? `Ke-${meetingNumber}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">{formatRupiah(item.rate)}</TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
               {payroll.items.length > 0 ? (
                 <tfoot>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-right font-medium">
+                    <TableCell colSpan={6} className="text-right font-medium">
                       Total
                     </TableCell>
                     <TableCell className="text-right font-medium">

@@ -32,6 +32,7 @@ export type TeacherRecord = {
   name: string;
   instruments: string[];
   ratePerSession: number;
+  defaultGroupRate: number | null;
   phone: string | null;
   status: TeacherStatus;
   user: { email: string } | null;
@@ -49,6 +50,7 @@ const EMPTY_FORM = {
   email: "",
   instruments: [] as string[],
   ratePerSession: "",
+  defaultGroupRate: "",
   phone: "",
   status: "ACTIVE" as TeacherStatus,
 };
@@ -68,6 +70,8 @@ export function TeacherForm({ open, onOpenChange, teacher }: TeacherFormProps) {
         email: teacher.user?.email ?? "",
         instruments: teacher.instruments,
         ratePerSession: String(teacher.ratePerSession),
+        defaultGroupRate:
+          teacher.defaultGroupRate != null ? String(teacher.defaultGroupRate) : "",
         phone: teacher.phone ?? "",
         status: teacher.status,
       });
@@ -93,6 +97,7 @@ export function TeacherForm({ open, onOpenChange, teacher }: TeacherFormProps) {
       name: form.name,
       instruments: form.instruments,
       ratePerSession: form.ratePerSession,
+      defaultGroupRate: form.defaultGroupRate === "" ? undefined : form.defaultGroupRate,
       phone: form.phone,
       status: form.status,
     };
@@ -181,20 +186,36 @@ export function TeacherForm({ open, onOpenChange, teacher }: TeacherFormProps) {
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="ratePerSession">Tarif per sesi (Rp)</Label>
-            <Input
-              id="ratePerSession"
-              type="number"
-              min={1}
-              step={1}
-              inputMode="numeric"
-              value={form.ratePerSession}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, ratePerSession: e.target.value }))
-              }
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="ratePerSession">Tarif Privat default (Rp)</Label>
+              <Input
+                id="ratePerSession"
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={form.ratePerSession}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, ratePerSession: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="defaultGroupRate">Tarif Grup default (Rp)</Label>
+              <Input
+                id="defaultGroupRate"
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={form.defaultGroupRate}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, defaultGroupRate: e.target.value }))
+                }
+              />
+            </div>
           </div>
 
           <div className="grid gap-2">
