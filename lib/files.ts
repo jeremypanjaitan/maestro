@@ -24,15 +24,32 @@ export const MEDIA_MAX_BYTES = 15 * 1024 * 1024; // 15 MB (video/audio)
  * right size limit before upload) and server-side (to re-derive the type
  * from `mimeType` rather than trusting whatever the client claims). */
 export function mimeTypeToAttachmentType(mimeType: string): AttachmentType | null {
+  // Normalize first: strip any `;charset=...`/params suffix and casing so a
+  // crafted mime like "image/svg+xml;charset=utf-8" or "IMAGE/SVG+XML"
+  // can't slip past the raw string comparisons below.
+  const m = normalizeMimeType(mimeType);
+
   // SVG is excluded from "image/*" on purpose: it can embed <script>/event
   // handlers, and this app renders PHOTO attachments as `<img src="data:...">`
   // -- rejecting it here (rather than trusting the browser to sandbox inline
   // SVG rendering) keeps a malicious upload from ever reaching the DOM.
-  if (mimeType === "image/svg+xml") return null;
-  if (mimeType.startsWith("image/")) return "PHOTO";
-  if (mimeType.startsWith("video/")) return "VIDEO";
-  if (mimeType.startsWith("audio/")) return "AUDIO";
+  if (m === "image/svg+xml" || m.startsWith("image/svg")) return null;
+  if (m.startsWith("image/")) return "PHOTO";
+  if (m.startsWith("video/")) return "VIDEO";
+  if (m.startsWith("audio/")) return "AUDIO";
   return null;
+}
+
+/**
+ * Normalizes a MIME type for comparison/storage: lowercases it and drops
+ * any `;charset=...`/parameter suffix. Both `mimeTypeToAttachmentType` and
+ * `addAttachment` (before writing to the DB) must go through this so the
+ * stored value always matches what was actually validated -- otherwise a
+ * client could send a mixed-case or parameterized mime that passes
+ * validation but gets persisted (and later re-rendered) in its raw form.
+ */
+export function normalizeMimeType(mimeType: string): string {
+  return mimeType.toLowerCase().split(";")[0].trim();
 }
 
 /** Byte cap for a given attachment kind. */

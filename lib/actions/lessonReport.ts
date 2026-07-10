@@ -6,7 +6,12 @@ import { Prisma, type AttachmentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSessionAccess } from "@/lib/actions/session";
 import { lessonReportSchema } from "@/lib/validations/lessonReport";
-import { base64ByteLength, maxBytesForType, mimeTypeToAttachmentType } from "@/lib/files";
+import {
+  base64ByteLength,
+  maxBytesForType,
+  mimeTypeToAttachmentType,
+  normalizeMimeType,
+} from "@/lib/files";
 
 export type LessonReportActionResult =
   | { ok: true; reportId: string }
@@ -80,20 +85,32 @@ export async function upsertLessonReport(
  * client-reported number) must be under that kind's cap. A client-side
  * check in `lib/files.ts` exists too, but it's advisory only -- it can be
  * bypassed by calling this action directly.
+ *
+ * SECURITY: a missing report and a denied-access report both resolve to
+ * the same `NOT_FOUND_ERROR` message -- otherwise an authenticated guru
+ * could distinguish "this reportId doesn't exist" from "this reportId
+ * belongs to another teacher" (an existence oracle for enumerating other
+ * teachers' report ids, even though cuids aren't practically guessable).
  */
+const NOT_FOUND_ERROR = "Data tidak ditemukan";
+
 export async function addAttachment(
   reportId: string,
   input: AddAttachmentInput,
 ): Promise<AttachmentActionResult> {
   const report = await prisma.lessonReport.findUnique({ where: { id: reportId } });
   if (!report) {
-    return { ok: false, error: "Laporan tidak ditemukan" };
+    return { ok: false, error: NOT_FOUND_ERROR };
   }
 
   const access = await requireSessionAccess(report.sessionId);
-  if (!access.ok) return { ok: false, error: access.error };
+  if (!access.ok) return { ok: false, error: NOT_FOUND_ERROR };
 
-  const { filename, mimeType, dataBase64 } = input;
+  const { filename, dataBase64 } = input;
+  // Normalize before any comparison AND before persisting, so the stored
+  // mimeType always matches what was actually validated (see
+  // `normalizeMimeType` in lib/files.ts).
+  const mimeType = normalizeMimeType(input.mimeType);
 
   if (!filename.trim() || !dataBase64) {
     return { ok: false, error: "Data lampiran tidak lengkap" };
@@ -132,7 +149,10 @@ export async function addAttachment(
  *
  * SECURITY: loads attachment -> report -> sessionId, then re-runs
  * `requireSessionAccess` so ownership is checked against the *current*
- * caller, not assumed from having reached this far in the UI.
+ * caller, not assumed from having reached this far in the UI. As with
+ * `addAttachment`, a missing attachment and a denied-access attachment both
+ * resolve to the same `NOT_FOUND_ERROR` message to avoid an existence
+ * oracle for other teachers' attachment ids.
  */
 export async function deleteAttachment(id: string): Promise<AttachmentActionResult> {
   const attachment = await prisma.attachment.findUnique({
@@ -140,17 +160,17 @@ export async function deleteAttachment(id: string): Promise<AttachmentActionResu
     include: { lessonReport: { select: { sessionId: true } } },
   });
   if (!attachment) {
-    return { ok: false, error: "Lampiran tidak ditemukan" };
+    return { ok: false, error: NOT_FOUND_ERROR };
   }
 
   const access = await requireSessionAccess(attachment.lessonReport.sessionId);
-  if (!access.ok) return { ok: false, error: access.error };
+  if (!access.ok) return { ok: false, error: NOT_FOUND_ERROR };
 
   try {
     await prisma.attachment.delete({ where: { id } });
   } catch (error) {
     if (isNotFoundError(error)) {
-      return { ok: false, error: "Lampiran tidak ditemukan" };
+      return { ok: false, error: NOT_FOUND_ERROR };
     }
     throw error;
   }
