@@ -24,6 +24,11 @@ export const MEDIA_MAX_BYTES = 15 * 1024 * 1024; // 15 MB (video/audio)
  * right size limit before upload) and server-side (to re-derive the type
  * from `mimeType` rather than trusting whatever the client claims). */
 export function mimeTypeToAttachmentType(mimeType: string): AttachmentType | null {
+  // SVG is excluded from "image/*" on purpose: it can embed <script>/event
+  // handlers, and this app renders PHOTO attachments as `<img src="data:...">`
+  // -- rejecting it here (rather than trusting the browser to sandbox inline
+  // SVG rendering) keeps a malicious upload from ever reaching the DOM.
+  if (mimeType === "image/svg+xml") return null;
   if (mimeType.startsWith("image/")) return "PHOTO";
   if (mimeType.startsWith("video/")) return "VIDEO";
   if (mimeType.startsWith("audio/")) return "AUDIO";

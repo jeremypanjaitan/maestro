@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -59,12 +59,14 @@ function toFormState(report?: LessonReportRecord | null) {
  */
 export function LessonReportForm({ sessionId, report }: LessonReportFormProps) {
   const router = useRouter();
+  // Seeded once from the initial `report` prop, deliberately NOT re-synced
+  // on every prop change: `AttachmentUploader` calls `router.refresh()`
+  // after upload/delete, which re-renders this page's server component and
+  // hands this form a new `report` object reference even though none of
+  // these six fields changed. Resyncing on every such refresh would wipe
+  // out whatever the guru was mid-typing in this form at that moment.
   const [form, setForm] = useState(toFormState(report));
   const [isPending, setIsPending] = useState(false);
-
-  useEffect(() => {
-    setForm(toFormState(report));
-  }, [report]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
