@@ -3,6 +3,7 @@ import type { SessionStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toDbDate, formatDbDate } from "@/lib/domain/dbDate";
+import { addDays, todayISO } from "@/lib/domain/week";
 
 export type CalendarSession = {
   id: string;
@@ -88,4 +89,16 @@ export async function getCalendarSessions({
     teacher: { id: s.teacher.id, name: s.teacher.name },
     student: { id: s.student.id, name: s.student.name },
   }));
+}
+
+/**
+ * Sessions for the "Sesi & Absensi" screen: the last 14 days (so a guru can
+ * still mark attendance for recently-past sessions) through the next 30
+ * days. Scoping to the caller's own teacherId happens inside
+ * `getCalendarSessions` — this is just a convenience wrapper with the date
+ * window this screen needs.
+ */
+export async function getGuruSessions(): Promise<CalendarSession[]> {
+  const today = todayISO();
+  return getCalendarSessions({ from: addDays(today, -14), to: addDays(today, 30) });
 }

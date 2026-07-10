@@ -1,14 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma, type SessionStatus } from "@prisma/client";
+import { Prisma, type Session, type SessionStatus } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { planSessions, type ScheduleInput } from "@/lib/domain/generateSessions";
 import { toDbDate, formatDbDate } from "@/lib/domain/dbDate";
+import { hasConflict, type Slot } from "@/lib/domain/conflict";
 
 export type SessionActionResult = { ok: true } | { ok: false; error: string };
+
+type SessionAccessResult =
+  | { ok: true; session: Session }
+  | { ok: false; error: string };
 
 export type GenerateSessionsResult =
   | { ok: true; created: number }
@@ -33,6 +38,36 @@ async function requireAdmin(): Promise<{ ok: false; error: string } | null> {
     return { ok: false, error: "Tidak diizinkan" };
   }
   return null;
+}
+
+/**
+ * Ownership guard shared by every action that mutates an existing session.
+ *
+ * SECURITY: role and teacherId are re-derived from `auth()` on every call,
+ * never trusted from the caller. ADMIN may act on any session. GURU may act
+ * only on sessions where `session.teacherId === auth().user.teacherId`.
+ * Everyone else (including unauthenticated callers) is denied.
+ */
+async function requireSessionAccess(sessionId: string): Promise<SessionAccessResult> {
+  const authSession = await auth();
+  if (!authSession?.user) {
+    return { ok: false, error: "Tidak diizinkan" };
+  }
+
+  const target = await prisma.session.findUnique({ where: { id: sessionId } });
+  if (!target) {
+    return { ok: false, error: "Sesi tidak ditemukan" };
+  }
+
+  if (authSession.user.role === "ADMIN") {
+    return { ok: true, session: target };
+  }
+
+  if (authSession.user.role === "GURU" && authSession.user.teacherId === target.teacherId) {
+    return { ok: true, session: target };
+  }
+
+  return { ok: false, error: "Tidak diizinkan" };
 }
 
 function isNotFoundError(error: unknown): boolean {
@@ -125,13 +160,17 @@ export async function generateSessions(
  * Sets a session's status directly. Does not handle RESCHEDULE — that
  * transition creates/links a replacement session and belongs to
  * `rescheduleSession` (Task 16).
+ *
+ * SECURITY: ADMIN may update any session; GURU may only update sessions
+ * where `session.teacherId === auth().user.teacherId` (enforced by
+ * `requireSessionAccess`, which re-derives role/teacherId from `auth()`).
  */
 export async function updateSessionStatus(
   sessionId: string,
   status: string,
 ): Promise<SessionActionResult> {
-  const guard = await requireAdmin();
-  if (guard) return guard;
+  const access = await requireSessionAccess(sessionId);
+  if (!access.ok) return access;
 
   if (!SETTABLE_STATUSES.includes(status as SessionStatus)) {
     return { ok: false, error: "Status tidak valid" };
@@ -150,10 +189,90 @@ export async function updateSessionStatus(
   }
 
   revalidatePath("/admin/sessions");
+  revalidatePath("/guru/sessions");
   return { ok: true };
 }
 
-/** Cancels a session (sets status to CANCEL). */
+/** Cancels a session (sets status to CANCEL). GURU may cancel their own
+ * sessions; ADMIN may cancel any (ownership enforced by `updateSessionStatus`
+ * -> `requireSessionAccess`). */
 export async function cancelSession(sessionId: string): Promise<SessionActionResult> {
   return updateSessionStatus(sessionId, "CANCEL");
+}
+
+/**
+ * Reschedules a session to a new date/time: the original session is marked
+ * RESCHEDULE and linked (`rescheduledToId`) to a brand-new SCHEDULED session
+ * carrying the same teacher/student/duration. Rejects if the new slot
+ * conflicts with another still-active session (same teacher OR same student,
+ * overlapping time) on the new date — reusing the same `hasConflict` domain
+ * logic as schedule creation.
+ *
+ * SECURITY: ownership enforced by `requireSessionAccess` (GURU: own sessions
+ * only; ADMIN: any session).
+ */
+export async function rescheduleSession(
+  sessionId: string,
+  newDateISO: string,
+  newStartTime: string,
+): Promise<SessionActionResult> {
+  const access = await requireSessionAccess(sessionId);
+  if (!access.ok) return access;
+  const original = access.session;
+
+  if (
+    !newDateISO.match(/^\d{4}-\d{2}-\d{2}$/) ||
+    !newStartTime.match(/^\d{2}:\d{2}$/)
+  ) {
+    return { ok: false, error: "Tanggal atau jam tidak valid" };
+  }
+
+  if (original.status === "RESCHEDULE" || original.status === "CANCEL") {
+    return { ok: false, error: "Sesi ini sudah direschedule atau dibatalkan" };
+  }
+
+  const newDate = toDbDate(newDateISO);
+
+  const sameDaySessions = await prisma.session.findMany({
+    where: {
+      date: newDate,
+      status: { notIn: ["CANCEL", "RESCHEDULE"] },
+      id: { not: original.id },
+    },
+    select: { teacherId: true, studentId: true, startTime: true, durationMinutes: true },
+  });
+
+  const candidate: Slot = {
+    teacherId: original.teacherId,
+    studentId: original.studentId,
+    startTime: newStartTime,
+    durationMinutes: original.durationMinutes,
+  };
+
+  if (hasConflict(candidate, sameDaySessions)) {
+    return { ok: false, error: "Jadwal pengganti bentrok dengan sesi lain" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const newSession = await tx.session.create({
+      data: {
+        scheduleId: null,
+        teacherId: original.teacherId,
+        studentId: original.studentId,
+        date: newDate,
+        startTime: newStartTime,
+        durationMinutes: original.durationMinutes,
+        status: "SCHEDULED",
+      },
+    });
+
+    await tx.session.update({
+      where: { id: original.id },
+      data: { status: "RESCHEDULE", rescheduledToId: newSession.id },
+    });
+  });
+
+  revalidatePath("/admin/sessions");
+  revalidatePath("/guru/sessions");
+  return { ok: true };
 }
