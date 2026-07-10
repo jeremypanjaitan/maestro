@@ -25,7 +25,7 @@ const phone = z
   .string()
   .trim()
   .optional()
-  .transform((value) => (value ? value : undefined));
+  .transform((value) => (value ? value : null));
 
 const status = z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE");
 

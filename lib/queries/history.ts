@@ -3,6 +3,7 @@ import type { AttachmentType, SessionStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDbDate, toDbDate } from "@/lib/domain/dbDate";
+import { todayISO } from "@/lib/domain/week";
 import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
 
 export type TimelineAttachment = {
@@ -165,7 +166,7 @@ export async function getTeacherHistory(
     return [];
   }
 
-  const to = filters.to ?? formatDbDate(new Date());
+  const to = filters.to ?? todayISO();
 
   const sessions = await prisma.session.findMany({
     where: {

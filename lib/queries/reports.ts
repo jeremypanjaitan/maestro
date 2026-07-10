@@ -242,32 +242,55 @@ export type PayrollRecap = {
   grandTotal: number;
 };
 
+/** Converts (year, month) into a single comparable integer so a period range
+ * check is a plain `>=`/`<=` instead of a two-field comparison. */
+function periodKey(year: number, month: number): number {
+  return year * 12 + (month - 1);
+}
+
 /**
- * Payroll recap: payrolls generated within the filtered range (by
- * `generatedAt`, inclusive of the whole `to` day), optionally narrowed to a
- * single teacher, plus a grand total.
+ * Payroll recap: payrolls whose PERIOD (periodYear/periodMonth) falls within
+ * the filtered `from`/`to` range, optionally narrowed to a single teacher,
+ * plus a grand total.
+ *
+ * Filtering by period (not `generatedAt`) matters here: a payroll can be
+ * (re)generated at any time, but the recap is displayed and read as "payroll
+ * for period X" — filtering by generation timestamp would show/hide rows
+ * that don't match the displayed period, contradicting the UI.
+ *
+ * `studentId` is intentionally a no-op here: Payroll has no student
+ * dimension (it's teacher x period), so it can't be filtered by student.
  */
 export async function getPayrollRecap(filters: ReportFilters = {}): Promise<PayrollRecap> {
   await requireAdmin();
 
-  const generatedAt: Prisma.DateTimeFilter = {};
-  if (filters.from) generatedAt.gte = toDbDate(filters.from);
+  let fromKey: number | undefined;
+  let toKey: number | undefined;
+  if (filters.from) {
+    const from = toDbDate(filters.from);
+    fromKey = periodKey(from.getUTCFullYear(), from.getUTCMonth() + 1);
+  }
   if (filters.to) {
-    // Inclusive upper bound: push to just before the next UTC midnight so
-    // the whole `to` day's payrolls (any time-of-day) are included.
-    generatedAt.lte = new Date(toDbDate(filters.to).getTime() + 24 * 60 * 60 * 1000 - 1);
+    const to = toDbDate(filters.to);
+    toKey = periodKey(to.getUTCFullYear(), to.getUTCMonth() + 1);
   }
 
   const payrolls = await prisma.payroll.findMany({
     where: {
-      ...(Object.keys(generatedAt).length ? { generatedAt } : {}),
       ...(filters.teacherId ? { teacherId: filters.teacherId } : {}),
     },
     orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }],
     include: { teacher: { select: { name: true } } },
   });
 
-  const rows: PayrollRecapRow[] = payrolls.map((payroll) => ({
+  const inRange = payrolls.filter((payroll) => {
+    const key = periodKey(payroll.periodYear, payroll.periodMonth);
+    if (fromKey !== undefined && key < fromKey) return false;
+    if (toKey !== undefined && key > toKey) return false;
+    return true;
+  });
+
+  const rows: PayrollRecapRow[] = inRange.map((payroll) => ({
     payrollId: payroll.id,
     teacherName: payroll.teacher.name,
     period: formatPeriod(payroll.periodMonth, payroll.periodYear),

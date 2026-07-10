@@ -77,6 +77,29 @@ function isNotFoundError(error: unknown): boolean {
   );
 }
 
+/** Same tightened HH:mm regex as `lib/validations/schedule.ts`'s `startTime`
+ * field, kept in sync so both reject e.g. "13:99"/"99:99". */
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Validates a "YYYY-MM-DD" string is both well-formed AND a real calendar
+ * date — plain regex accepts "2026-02-30", which JS `Date` silently rolls
+ * over to March 2. Round-tripping through `toDbDate`/`formatDbDate` (the
+ * same UTC-anchored construction used to write/read the `@db.Date` column)
+ * catches the rollover: if the formatted result doesn't match the input,
+ * the date was invalid.
+ */
+function isValidCalendarDate(dateStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  return formatDbDate(toDbDate(dateStr)) === dateStr;
+}
+
+/** Validates a "HH:mm" clock time using the same tightened regex as
+ * `lib/validations/schedule.ts`, rejecting hours/minutes out of range. */
+function isValidClockTime(timeStr: string): boolean {
+  return TIME_REGEX.test(timeStr);
+}
+
 /**
  * Parses a "YYYY-MM-DD" string into a *local* midnight Date. Used only for
  * in-memory date arithmetic (feeding `planSessions`'s from/to bounds and day
@@ -101,15 +124,13 @@ export async function generateSessions(
   const guard = await requireAdmin();
   if (guard) return guard;
 
+  if (!isValidCalendarDate(fromISO) || !isValidCalendarDate(toISO)) {
+    return { ok: false, error: "Rentang tanggal tidak valid" };
+  }
+
   const from = parseLocalDate(fromISO);
   const to = parseLocalDate(toISO);
-  if (
-    !fromISO.match(/^\d{4}-\d{2}-\d{2}$/) ||
-    !toISO.match(/^\d{4}-\d{2}-\d{2}$/) ||
-    Number.isNaN(from.getTime()) ||
-    Number.isNaN(to.getTime()) ||
-    from > to
-  ) {
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
     return { ok: false, error: "Rentang tanggal tidak valid" };
   }
 
@@ -176,6 +197,24 @@ export async function updateSessionStatus(
     return { ok: false, error: "Status tidak valid" };
   }
 
+  // MONEY INTEGRITY: a RESCHEDULE session is system-linked to its
+  // replacement — flipping it directly would double-count attendance (the
+  // replacement session is ALSO billable). A CANCEL session may only be
+  // reopened to SCHEDULED; it must not be marked attended/absent directly.
+  const currentStatus = access.session.status;
+  if (currentStatus === "RESCHEDULE") {
+    return {
+      ok: false,
+      error: "Sesi ini sudah di-reschedule; ubah sesi penggantinya.",
+    };
+  }
+  if (currentStatus === "CANCEL" && status !== "SCHEDULED") {
+    return {
+      ok: false,
+      error: "Sesi dibatalkan; jadwalkan ulang ke SCHEDULED sebelum mengisi absensi.",
+    };
+  }
+
   try {
     await prisma.session.update({
       where: { id: sessionId },
@@ -220,10 +259,7 @@ export async function rescheduleSession(
   if (!access.ok) return access;
   const original = access.session;
 
-  if (
-    !newDateISO.match(/^\d{4}-\d{2}-\d{2}$/) ||
-    !newStartTime.match(/^\d{2}:\d{2}$/)
-  ) {
+  if (!isValidCalendarDate(newDateISO) || !isValidClockTime(newStartTime)) {
     return { ok: false, error: "Tanggal atau jam tidak valid" };
   }
 

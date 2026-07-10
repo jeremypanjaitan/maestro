@@ -25,6 +25,11 @@ async function requireAdmin(): Promise<{ ok: false; error: string } | null> {
 
 const VALID_STATUSES: PayrollStatus[] = ["DRAFT", "APPROVED", "PAID"];
 
+/** Thrown from inside the `generatePayroll` transaction when the
+ * authoritative in-tx PAID re-check trips; caught right outside the
+ * transaction and turned into the normal `{ ok: false }` result shape. */
+class PayrollPaidError extends Error {}
+
 /** Legal status transitions. PAID is terminal (locked, no further changes).
  * APPROVED may revert to DRAFT for admin correction. */
 const ALLOWED_TRANSITIONS: Record<PayrollStatus, PayrollStatus[]> = {
@@ -99,37 +104,65 @@ export async function generatePayroll(
     teacher.ratePerSession,
   );
 
-  const payroll = await prisma.$transaction(async (tx) => {
-    if (existing) {
-      // Delete before recreating so the globally-unique
-      // `PayrollItem.sessionId` never collides with itself.
-      await tx.payrollItem.deleteMany({ where: { payrollId: existing.id } });
-    }
-
-    const record = await tx.payroll.upsert({
-      where: {
-        teacherId_periodMonth_periodYear: {
-          teacherId,
-          periodMonth: month,
-          periodYear: year,
+  let payroll;
+  try {
+    payroll = await prisma.$transaction(async (tx) => {
+      // Authoritative re-check: re-fetch inside the transaction so the
+      // PAID-guard and the mutation are atomic. The pre-transaction check
+      // above is only a fast path — without this, a concurrent request
+      // could race between that check and this write and flip a PAID
+      // payroll.
+      const current = await tx.payroll.findUnique({
+        where: {
+          teacherId_periodMonth_periodYear: {
+            teacherId,
+            periodMonth: month,
+            periodYear: year,
+          },
         },
-      },
-      create: { teacherId, periodMonth: month, periodYear: year, status: "DRAFT", total },
-      update: { status: "DRAFT", total },
-    });
-
-    if (items.length > 0) {
-      await tx.payrollItem.createMany({
-        data: items.map((item) => ({
-          payrollId: record.id,
-          sessionId: item.sessionId,
-          rate: item.rate,
-        })),
       });
-    }
+      if (current?.status === "PAID") {
+        throw new PayrollPaidError(
+          "Payroll periode ini sudah dibayar (PAID) dan tidak bisa di-generate ulang",
+        );
+      }
 
-    return record;
-  });
+      if (existing) {
+        // Delete before recreating so the globally-unique
+        // `PayrollItem.sessionId` never collides with itself.
+        await tx.payrollItem.deleteMany({ where: { payrollId: existing.id } });
+      }
+
+      const record = await tx.payroll.upsert({
+        where: {
+          teacherId_periodMonth_periodYear: {
+            teacherId,
+            periodMonth: month,
+            periodYear: year,
+          },
+        },
+        create: { teacherId, periodMonth: month, periodYear: year, status: "DRAFT", total },
+        update: { status: "DRAFT", total },
+      });
+
+      if (items.length > 0) {
+        await tx.payrollItem.createMany({
+          data: items.map((item) => ({
+            payrollId: record.id,
+            sessionId: item.sessionId,
+            rate: item.rate,
+          })),
+        });
+      }
+
+      return record;
+    });
+  } catch (error) {
+    if (error instanceof PayrollPaidError) {
+      return { ok: false, error: error.message };
+    }
+    throw error;
+  }
 
   revalidatePath("/admin/payroll");
   revalidatePath(`/admin/payroll/${payroll.id}`);
