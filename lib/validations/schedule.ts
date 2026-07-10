@@ -26,7 +26,7 @@ const dayOfWeek = z.coerce
 const startTime = z
   .string()
   .trim()
-  .regex(/^\d{2}:\d{2}$/, "Jam harus berformat HH:mm");
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Jam harus berformat HH:mm");
 
 const durationMinutes = z.coerce
   .number({ error: "Durasi wajib diisi" })

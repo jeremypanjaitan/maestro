@@ -132,16 +132,41 @@ export async function updateSchedule(
 }
 
 /** Flips a schedule's `active` flag. Deactivated schedules are excluded from
- * conflict checks and no longer generate new sessions. */
+ * conflict checks and no longer generate new sessions. Reactivating
+ * (false -> true) re-runs the conflict check, since another schedule may
+ * have been created for the same teacher/student/slot while this one was
+ * inactive. Deactivating (true -> false) never conflicts. */
 export async function toggleSchedule(id: string): Promise<ScheduleActionResult> {
   const guard = await requireAdmin();
   if (guard) return guard;
 
+  let schedule;
   try {
-    const schedule = await prisma.schedule.findUniqueOrThrow({ where: { id } });
+    schedule = await prisma.schedule.findUniqueOrThrow({ where: { id } });
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return { ok: false, error: "Jadwal tidak ditemukan" };
+    }
+    throw error;
+  }
+
+  const reactivating = !schedule.active;
+  if (reactivating) {
+    const candidate: Slot = {
+      teacherId: schedule.teacherId,
+      studentId: schedule.studentId,
+      startTime: schedule.startTime,
+      durationMinutes: schedule.durationMinutes,
+    };
+    if (await conflictsWithActiveSchedules(candidate, schedule.dayOfWeek, id)) {
+      return { ok: false, error: CONFLICT_MESSAGE };
+    }
+  }
+
+  try {
     await prisma.schedule.update({
       where: { id },
-      data: { active: !schedule.active },
+      data: { active: reactivating },
     });
   } catch (error) {
     if (isNotFoundError(error)) {
