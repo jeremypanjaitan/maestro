@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -126,6 +127,9 @@ export function StudentsTable({ students }: StudentsTableProps) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/students/${student.id}/timeline`}>Riwayat</Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => openEditDialog(student)}>
                           Edit
                         </DropdownMenuItem>
