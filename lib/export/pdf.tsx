@@ -4,7 +4,8 @@ import { formatDbDate } from "@/lib/domain/dbDate";
 import { PAYROLL_STATUS_LABELS } from "@/lib/domain/constants";
 import { formatPeriod, formatRupiah } from "@/lib/utils";
 
-import type { PayrollExportData } from "./types";
+import { REPORT_TITLES } from "./types";
+import type { PayrollExportData, ReportExportMeta, ReportRow, ReportType } from "./types";
 
 const styles = StyleSheet.create({
   page: {
@@ -99,4 +100,76 @@ export function PayrollDocument({ payroll }: PayrollDocumentProps) {
  */
 export async function renderPayrollPdf(payroll: PayrollExportData): Promise<Buffer> {
   return renderToBuffer(<PayrollDocument payroll={payroll} />);
+}
+
+const reportStyles = StyleSheet.create({
+  headerCell: { padding: 6, fontWeight: 700 },
+  cell: { padding: 6 },
+  summary: {
+    marginTop: 12,
+    fontSize: 11,
+    fontWeight: 700,
+  },
+});
+
+type ReportDocumentProps = {
+  type: ReportType;
+  data: ReportRow[];
+  meta: ReportExportMeta;
+};
+
+/** Generic recap document (Task 22 "Laporan"): title + subtitle, a table
+ * built from `meta.columns`/`data`, and optional summary lines. Kept
+ * generic over the 4 recap shapes — the caller supplies columns + rows. */
+export function ReportDocument({ type, data, meta }: ReportDocumentProps) {
+  const title = meta.title ?? REPORT_TITLES[type];
+  const columnWidth = `${100 / meta.columns.length}%`;
+
+  return (
+    <Document>
+      <Page size="A4" orientation="landscape" style={styles.page}>
+        <Text style={styles.title}>{title}</Text>
+        {meta.subtitle ? <Text style={styles.meta}>{meta.subtitle}</Text> : null}
+
+        <View style={styles.table}>
+          <View style={styles.headerRow}>
+            {meta.columns.map((column) => (
+              <Text key={column.key} style={[reportStyles.headerCell, { width: columnWidth }]}>
+                {column.header}
+              </Text>
+            ))}
+          </View>
+
+          {data.map((row, index) => (
+            <View style={styles.row} key={index}>
+              {meta.columns.map((column) => (
+                <Text key={column.key} style={[reportStyles.cell, { width: columnWidth }]}>
+                  {String(row[column.key] ?? "")}
+                </Text>
+              ))}
+            </View>
+          ))}
+        </View>
+
+        {meta.summary?.map((item) => (
+          <Text key={item.label} style={reportStyles.summary}>
+            {item.label}: {item.value}
+          </Text>
+        ))}
+      </Page>
+    </Document>
+  );
+}
+
+/**
+ * Renders a generic recap PDF document to a Buffer. Node-only
+ * (@react-pdf/renderer) — only ever import this from a route handler or
+ * another server-only module.
+ */
+export async function renderReportPdf(
+  type: ReportType,
+  data: ReportRow[],
+  meta: ReportExportMeta,
+): Promise<Buffer> {
+  return renderToBuffer(<ReportDocument type={type} data={data} meta={meta} />);
 }
