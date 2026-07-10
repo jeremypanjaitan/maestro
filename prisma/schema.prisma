@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  GURU
+}
+
+enum TeacherStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SessionStatus {
+  SCHEDULED
+  HADIR
+  MURID_TIDAK_HADIR
+  GURU_TIDAK_HADIR
+  RESCHEDULE
+  CANCEL
+}
+
+enum AttachmentType {
+  PHOTO
+  VIDEO
+  AUDIO
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED
+  PAID
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  teacher      Teacher?
+  createdAt    DateTime @default(now())
+}
+
+model Teacher {
+  id             String        @id @default(cuid())
+  name           String
+  instruments    String[]
+  ratePerSession Int
+  phone          String?
+  status         TeacherStatus @default(ACTIVE)
+  user           User?         @relation(fields: [userId], references: [id])
+  userId         String?       @unique
+  schedules      Schedule[]
+  sessions       Session[]
+  payrolls       Payroll[]
+  createdAt      DateTime      @default(now())
+}
+
+model Student {
+  id             String        @id @default(cuid())
+  name           String
+  parentName     String?
+  contact        String?
+  instrument     String
+  level          String?
+  learningTarget String?
+  status         StudentStatus @default(ACTIVE)
+  schedules      Schedule[]
+  sessions       Session[]
+  createdAt      DateTime      @default(now())
+}
+
+model Schedule {
+  id              String    @id @default(cuid())
+  teacher         Teacher   @relation(fields: [teacherId], references: [id])
+  teacherId       String
+  student         Student   @relation(fields: [studentId], references: [id])
+  studentId       String
+  instrument      String
+  dayOfWeek       Int // 0=Minggu..6=Sabtu
+  startTime       String // "HH:mm"
+  durationMinutes Int       @default(60)
+  active          Boolean   @default(true)
+  sessions        Session[]
+  createdAt       DateTime  @default(now())
+}
+
+model Session {
+  id              String        @id @default(cuid())
+  schedule        Schedule?     @relation(fields: [scheduleId], references: [id])
+  scheduleId      String?
+  teacher         Teacher       @relation(fields: [teacherId], references: [id])
+  teacherId       String
+  student         Student       @relation(fields: [studentId], references: [id])
+  studentId       String
+  date            DateTime      @db.Date
+  startTime       String
+  durationMinutes Int           @default(60)
+  status          SessionStatus @default(SCHEDULED)
+  rescheduledTo   Session?      @relation("Reschedule", fields: [rescheduledToId], references: [id])
+  rescheduledToId String?       @unique
+  rescheduledFrom Session?      @relation("Reschedule")
+  lessonReport    LessonReport?
+  payrollItem     PayrollItem?
+  createdAt       DateTime      @default(now())
+
+  @@index([teacherId, date])
+  @@index([studentId, date])
+}
+
+model LessonReport {
+  id          String       @id @default(cuid())
+  session     Session      @relation(fields: [sessionId], references: [id])
+  sessionId   String       @unique
+  material    String?
+  target      String?
+  result      String?
+  homework    String?
+  grade       String?
+  notes       String?
+  attachments Attachment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Attachment {
+  id             String         @id @default(cuid())
+  lessonReport   LessonReport   @relation(fields: [lessonReportId], references: [id], onDelete: Cascade)
+  lessonReportId String
+  type           AttachmentType
+  filename       String
+  mimeType       String
+  dataBase64     String         @db.Text
+  createdAt      DateTime       @default(now())
+}
+
+model Payroll {
+  id          String        @id @default(cuid())
+  teacher     Teacher       @relation(fields: [teacherId], references: [id])
+  teacherId   String
+  periodMonth Int
+  periodYear  Int
+  status      PayrollStatus @default(DRAFT)
+  total       Int           @default(0)
+  items       PayrollItem[]
+  generatedAt DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([teacherId, periodMonth, periodYear])
+}
+
+model PayrollItem {
+  id        String  @id @default(cuid())
+  payroll   Payroll @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  payrollId String
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId String  @unique
+  rate      Int
+}
