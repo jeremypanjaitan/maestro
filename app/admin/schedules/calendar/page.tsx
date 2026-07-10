@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCalendarSessions } from "@/lib/queries/calendar";
 import { addDays, getWeekStart, todayISO } from "@/lib/domain/week";
+import { PageHeader } from "@/components/page-header";
 import { ScheduleCalendar } from "@/components/schedule-calendar";
 import { CalendarFilters } from "@/components/calendar-filters";
 
@@ -48,10 +49,11 @@ export default async function AdminScheduleCalendarPage({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Kalender Jadwal
-      </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Kalender Jadwal"
+        description="Tampilan mingguan seluruh sesi terjadwal, dapat difilter per guru/murid."
+      />
 
       <CalendarFilters
         teachers={teachers}

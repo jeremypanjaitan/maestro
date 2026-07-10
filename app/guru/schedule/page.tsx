@@ -1,5 +1,6 @@
 import { getCalendarSessions } from "@/lib/queries/calendar";
 import { addDays, getWeekStart, todayISO } from "@/lib/domain/week";
+import { PageHeader } from "@/components/page-header";
 import { ScheduleCalendar } from "@/components/schedule-calendar";
 
 type GuruSchedulePageProps = {
@@ -25,10 +26,11 @@ export default async function GuruSchedulePage({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Jadwal Saya
-      </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Jadwal Saya"
+        description="Tampilan mingguan sesi mengajar Anda."
+      />
 
       <ScheduleCalendar
         sessions={sessions}

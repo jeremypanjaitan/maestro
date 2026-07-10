@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
+import { Download } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { formatDbDate } from "@/lib/domain/dbDate";
-import { PAYROLL_STATUS_LABELS } from "@/lib/domain/constants";
+import { getMeetingNumbersForTeacher } from "@/lib/queries/payroll";
 import { formatPeriod, formatRupiah } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
+import { ClassTypeBadge, PayrollStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -30,7 +33,14 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
       items: {
         include: {
           session: {
-            select: { date: true, startTime: true, student: { select: { name: true } } },
+            select: {
+              id: true,
+              date: true,
+              startTime: true,
+              classType: true,
+              student: { select: { name: true, instrument: true } },
+              schedule: { select: { instrument: true } },
+            },
           },
         },
         orderBy: { session: { date: "asc" } },
@@ -44,86 +54,120 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
 
   const period = formatPeriod(payroll.periodMonth, payroll.periodYear);
 
+  // Meeting numbers ("pertemuan ke-N") must be computed against the
+  // teacher's FULL session history, not just this payroll's items — see
+  // `getMeetingNumbersForTeacher`.
+  const meetingNumbers = await getMeetingNumbersForTeacher(payroll.teacherId);
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Payroll — {payroll.teacher.name} — {period}
-          </h1>
-          <div className="mt-1 flex items-center gap-2">
-            <Badge>{PAYROLL_STATUS_LABELS[payroll.status]}</Badge>
-            <span className="text-sm text-muted-foreground">
-              {payroll.items.length} sesi &middot; total {formatRupiah(payroll.total)}
+    <div className="space-y-6">
+      <PageHeader
+        title={`Payroll — ${payroll.teacher.name}`}
+        description={`Periode ${period} · ${payroll.items.length} sesi HADIR`}
+      >
+        <Button asChild variant="outline" size="sm">
+          <a href={`/api/export/payroll/${payroll.id}?format=pdf`} target="_blank" rel="noopener noreferrer">
+            <Download />
+            PDF
+          </a>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <a href={`/api/export/payroll/${payroll.id}?format=excel`} download>
+            <Download />
+            Excel
+          </a>
+        </Button>
+        <PayrollStatusActions
+          payroll={{
+            id: payroll.id,
+            teacherName: payroll.teacher.name,
+            periodMonth: payroll.periodMonth,
+            periodYear: payroll.periodYear,
+            status: payroll.status,
+            total: payroll.total,
+            itemCount: payroll.items.length,
+          }}
+        />
+      </PageHeader>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Status</span>
+            <PayrollStatusBadge status={payroll.status} />
+          </div>
+          <div className="flex flex-col sm:items-end">
+            <span className="text-xs text-muted-foreground">Grand Total</span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground">
+              {formatRupiah(payroll.total)}
             </span>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <a href={`/api/export/payroll/${payroll.id}?format=pdf`} target="_blank" rel="noopener noreferrer">
-              Export PDF
-            </a>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <a href={`/api/export/payroll/${payroll.id}?format=excel`} download>
-              Export Excel
-            </a>
-          </Button>
-          <PayrollStatusActions
-            payroll={{
-              id: payroll.id,
-              teacherName: payroll.teacher.name,
-              periodMonth: payroll.periodMonth,
-              periodYear: payroll.periodYear,
-              status: payroll.status,
-              total: payroll.total,
-              itemCount: payroll.items.length,
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tanggal</TableHead>
-              <TableHead>Jam</TableHead>
-              <TableHead>Murid</TableHead>
-              <TableHead>Tarif</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {payroll.items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                  Tidak ada sesi HADIR pada periode ini.
-                </TableCell>
-              </TableRow>
-            ) : (
-              payroll.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{formatDbDate(item.session.date)}</TableCell>
-                  <TableCell>{item.session.startTime}</TableCell>
-                  <TableCell>{item.session.student.name}</TableCell>
-                  <TableCell>{formatRupiah(item.rate)}</TableCell>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">No</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Murid</TableHead>
+                  <TableHead>Instrumen</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead>Pertemuan ke-N</TableHead>
+                  <TableHead className="text-right">Tarif</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-          {payroll.items.length > 0 ? (
-            <tfoot>
-              <TableRow>
-                <TableCell colSpan={3} className="text-right font-medium">
-                  Total
-                </TableCell>
-                <TableCell className="font-medium">{formatRupiah(payroll.total)}</TableCell>
-              </TableRow>
-            </tfoot>
-          ) : null}
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {payroll.items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      Tidak ada sesi HADIR pada periode ini.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  payroll.items.map((item, index) => {
+                    const meetingNumber = meetingNumbers.get(item.session.id);
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          {formatDbDate(item.session.date)} · {item.session.startTime}
+                        </TableCell>
+                        <TableCell className="font-medium">{item.session.student.name}</TableCell>
+                        <TableCell>
+                          {item.session.schedule?.instrument ?? item.session.student.instrument}
+                        </TableCell>
+                        <TableCell>
+                          <ClassTypeBadge classType={item.session.classType} />
+                        </TableCell>
+                        <TableCell>
+                          {meetingNumber != null ? `Ke-${meetingNumber}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">{formatRupiah(item.rate)}</TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+              {payroll.items.length > 0 ? (
+                <tfoot>
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-right font-medium">
+                      Total
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatRupiah(payroll.total)}
+                    </TableCell>
+                  </TableRow>
+                </tfoot>
+              ) : null}
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

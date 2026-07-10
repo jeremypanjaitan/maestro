@@ -4,8 +4,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireSessionAccess } from "@/lib/actions/session";
 import { formatDbDate } from "@/lib/domain/dbDate";
+import { PageHeader } from "@/components/page-header";
 import { LessonReportForm } from "@/components/lesson-report-form";
 import { AttachmentUploader } from "@/components/attachment-uploader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type SessionReportPageProps = {
   params: Promise<{ id: string }>;
@@ -50,28 +52,32 @@ export default async function SessionReportPage({ params }: SessionReportPagePro
   const report = sessionRecord.lessonReport;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Laporan Sesi -- {sessionRecord.student.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {formatDbDate(sessionRecord.date)} · {sessionRecord.startTime}
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`Laporan Sesi — ${sessionRecord.student.name}`}
+        description={`${formatDbDate(sessionRecord.date)} · ${sessionRecord.startTime}`}
+      />
 
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-medium text-foreground">Laporan</h2>
-        <LessonReportForm sessionId={sessionRecord.id} report={report} />
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Laporan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LessonReportForm sessionId={sessionRecord.id} report={report} />
+        </CardContent>
+      </Card>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-medium text-foreground">Lampiran</h2>
-        <AttachmentUploader
-          reportId={report?.id ?? null}
-          attachments={report?.attachments ?? []}
-        />
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lampiran</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AttachmentUploader
+            reportId={report?.id ?? null}
+            attachments={report?.attachments ?? []}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

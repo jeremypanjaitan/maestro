@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { GenerateSessionsDialog } from "@/components/generate-sessions-dialog";
+import { PageHeader } from "@/components/page-header";
 import { SessionsTable, type SessionRecord } from "@/components/sessions-table";
 
 function startOfCurrentMonthUTC(): Date {
@@ -39,18 +40,20 @@ export default async function AdminSessionsPage() {
     durationMinutes: session.durationMinutes,
     status: session.status,
     instrument: session.schedule?.instrument ?? session.student.instrument,
+    classType: session.classType,
+    rate: session.rate,
     teacher: session.teacher,
     student: { id: session.student.id, name: session.student.name },
   }));
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Kelola Sesi
-        </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Kelola Sesi"
+        description="Sesi bulan berjalan yang dibuat dari jadwal aktif."
+      >
         <GenerateSessionsDialog />
-      </div>
+      </PageHeader>
 
       <SessionsTable sessions={sessionRecords} teachers={teachers} />
     </div>

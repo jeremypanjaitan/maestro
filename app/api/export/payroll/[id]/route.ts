@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { buildPayrollWorkbook } from "@/lib/export/excel";
 import { renderPayrollPdf } from "@/lib/export/pdf";
 import type { PayrollExportData } from "@/lib/export/types";
+import { getMeetingNumbersForTeacher } from "@/lib/queries/payroll";
 import { formatPeriod } from "@/lib/utils";
 
 // @react-pdf/renderer and exceljs are Node-only libraries; this route must
@@ -41,7 +42,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       items: {
         include: {
           session: {
-            select: { date: true, startTime: true, student: { select: { name: true } } },
+            select: {
+              id: true,
+              date: true,
+              startTime: true,
+              classType: true,
+              student: { select: { name: true } },
+            },
           },
         },
         orderBy: { session: { date: "asc" } },
@@ -53,6 +60,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return new Response("Not found", { status: 404 });
   }
 
+  // Meeting numbers ("pertemuan ke-N") are computed against the teacher's
+  // FULL session history so the exported numbers match what the detail
+  // page shows — see `getMeetingNumbersForTeacher`.
+  const meetingNumbers = await getMeetingNumbersForTeacher(payroll.teacherId);
+
   const exportData: PayrollExportData = {
     teacherName: payroll.teacher.name,
     periodMonth: payroll.periodMonth,
@@ -63,6 +75,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       date: item.session.date,
       studentName: item.session.student.name,
       startTime: item.session.startTime,
+      classType: item.session.classType,
+      meetingNumber: meetingNumbers.get(item.session.id) ?? null,
       rate: item.rate,
     })),
   };

@@ -1,7 +1,7 @@
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 
 import { formatDbDate } from "@/lib/domain/dbDate";
-import { PAYROLL_STATUS_LABELS } from "@/lib/domain/constants";
+import { CLASS_TYPE_LABELS, PAYROLL_STATUS_LABELS } from "@/lib/domain/constants";
 import { formatPeriod, formatRupiah } from "@/lib/utils";
 
 import { REPORT_TITLES } from "./types";
@@ -37,11 +37,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     fontWeight: 700,
   },
-  cellNo: { width: "8%", padding: 6 },
-  cellDate: { width: "20%", padding: 6 },
-  cellStudent: { width: "37%", padding: 6 },
-  cellTime: { width: "15%", padding: 6 },
-  cellRate: { width: "20%", padding: 6, textAlign: "right" },
+  cellNo: { width: "6%", padding: 6 },
+  cellDate: { width: "14%", padding: 6 },
+  cellStudent: { width: "24%", padding: 6 },
+  cellTime: { width: "10%", padding: 6 },
+  cellType: { width: "12%", padding: 6 },
+  cellMeeting: { width: "18%", padding: 6 },
+  cellRate: { width: "16%", padding: 6, textAlign: "right" },
   totalRow: {
     flexDirection: "row",
     fontWeight: 700,
@@ -70,6 +72,8 @@ export function PayrollDocument({ payroll }: PayrollDocumentProps) {
             <Text style={styles.cellDate}>Tanggal</Text>
             <Text style={styles.cellStudent}>Murid</Text>
             <Text style={styles.cellTime}>Jam</Text>
+            <Text style={styles.cellType}>Tipe</Text>
+            <Text style={styles.cellMeeting}>Pertemuan ke-N</Text>
             <Text style={styles.cellRate}>Rate</Text>
           </View>
 
@@ -79,6 +83,10 @@ export function PayrollDocument({ payroll }: PayrollDocumentProps) {
               <Text style={styles.cellDate}>{formatDbDate(item.date)}</Text>
               <Text style={styles.cellStudent}>{item.studentName}</Text>
               <Text style={styles.cellTime}>{item.startTime}</Text>
+              <Text style={styles.cellType}>{CLASS_TYPE_LABELS[item.classType]}</Text>
+              <Text style={styles.cellMeeting}>
+                {item.meetingNumber != null ? `Ke-${item.meetingNumber}` : "-"}
+              </Text>
               <Text style={styles.cellRate}>{formatRupiah(item.rate)}</Text>
             </View>
           ))}

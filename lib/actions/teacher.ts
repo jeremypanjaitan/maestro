@@ -54,7 +54,7 @@ export async function createTeacher(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { name, email, instruments, ratePerSession, phone, status } =
+  const { name, email, instruments, ratePerSession, defaultGroupRate, phone, status } =
     parsed.data;
 
   try {
@@ -69,6 +69,7 @@ export async function createTeacher(
           name,
           instruments,
           ratePerSession,
+          defaultGroupRate,
           phone,
           status,
           userId: user.id,
@@ -101,13 +102,13 @@ export async function updateTeacher(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { name, instruments, ratePerSession, phone, status } = parsed.data;
+  const { name, instruments, ratePerSession, defaultGroupRate, phone, status } = parsed.data;
 
   try {
     await prisma.$transaction(async (tx) => {
       const teacher = await tx.teacher.update({
         where: { id },
-        data: { name, instruments, ratePerSession, phone, status },
+        data: { name, instruments, ratePerSession, defaultGroupRate, phone, status },
       });
       if (teacher.userId) {
         await tx.user.update({

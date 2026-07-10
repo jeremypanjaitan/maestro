@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import { Download } from "lucide-react";
+
 import { prisma } from "@/lib/prisma";
 import {
   getAttendanceRecap,
@@ -6,8 +9,11 @@ import {
   getPayrollRecap,
 } from "@/lib/queries/reports";
 import { formatRupiah } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 import { ReportFilters } from "@/components/report-filters";
+import { SessionStatusBadge, PayrollStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -51,15 +57,29 @@ function ExportLinks({ reportType, query }: { reportType: string; query: string 
     <div className="flex items-center gap-2">
       <Button asChild variant="outline" size="sm">
         <a href={`${base}?${query}${sep}format=pdf`} target="_blank" rel="noopener noreferrer">
-          Export PDF
+          <Download />
+          PDF
         </a>
       </Button>
       <Button asChild variant="outline" size="sm">
         <a href={`${base}?${query}${sep}format=excel`} download>
-          Export Excel
+          <Download />
+          Excel
         </a>
       </Button>
     </div>
+  );
+}
+
+/** Small metric tile for a tab's summary strip (compact StatCard variant). */
+function StatTile({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <Card size="sm">
+      <CardContent className="flex flex-col gap-0.5">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="text-lg font-semibold tracking-tight text-foreground">{value}</span>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -92,8 +112,11 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
   ]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Laporan</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Laporan"
+        description="Rekap absensi, jam mengajar, perkembangan murid, dan payroll."
+      />
 
       <ReportFilters teachers={teachers} students={students} {...filters} />
 
@@ -106,179 +129,193 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
         </TabsList>
 
         <TabsContent value="attendance" className="flex flex-col gap-4 pt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-wrap gap-4 text-sm">
-              <span className="font-medium text-foreground">Total: {attendance.total}</span>
-              <span>Hadir: {attendance.counts.HADIR}</span>
-              <span>Murid Tidak Hadir: {attendance.counts.MURID_TIDAK_HADIR}</span>
-              <span>Guru Tidak Hadir: {attendance.counts.GURU_TIDAK_HADIR}</span>
-              <span>Reschedule: {attendance.counts.RESCHEDULE}</span>
-              <span>Cancel: {attendance.counts.CANCEL}</span>
-              <span>Terjadwal: {attendance.counts.SCHEDULED}</span>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <StatTile label="Total" value={attendance.total} />
+              <StatTile label="Hadir" value={attendance.counts.HADIR} />
+              <StatTile label="Murid Tidak Hadir" value={attendance.counts.MURID_TIDAK_HADIR} />
+              <StatTile label="Guru Tidak Hadir" value={attendance.counts.GURU_TIDAK_HADIR} />
+              <StatTile label="Reschedule" value={attendance.counts.RESCHEDULE} />
+              <StatTile label="Cancel" value={attendance.counts.CANCEL} />
             </div>
             <ExportLinks reportType="attendance" query={query} />
           </div>
 
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Guru</TableHead>
-                  <TableHead>Murid</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attendance.details.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      Tidak ada data pada periode ini.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  attendance.details.map((row, index) => (
-                    <TableRow key={`${row.date}-${row.teacherName}-${row.studentName}-${index}`}>
-                      <TableCell>{row.date}</TableCell>
-                      <TableCell>{row.teacherName}</TableCell>
-                      <TableCell>{row.studentName}</TableCell>
-                      <TableCell>{row.statusLabel}</TableCell>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Guru</TableHead>
+                      <TableHead>Murid</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {attendance.details.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                          Tidak ada data pada periode ini.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      attendance.details.map((row, index) => (
+                        <TableRow key={`${row.date}-${row.teacherName}-${row.studentName}-${index}`}>
+                          <TableCell>{row.date}</TableCell>
+                          <TableCell>{row.teacherName}</TableCell>
+                          <TableCell>{row.studentName}</TableCell>
+                          <TableCell>
+                            <SessionStatusBadge status={row.status} />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="hours" className="flex flex-col gap-4 pt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-wrap gap-4 text-sm">
-              <span className="font-medium text-foreground">
-                Total Sesi: {hours.grandTotalSessions}
-              </span>
-              <span>Hadir: {hours.grandTotalHadir}</span>
-              <span>
-                Total Jam: {Math.round((hours.grandTotalMinutes / 60) * 100) / 100}
-              </span>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <StatTile label="Total Sesi" value={hours.grandTotalSessions} />
+              <StatTile label="Hadir" value={hours.grandTotalHadir} />
+              <StatTile
+                label="Total Jam"
+                value={Math.round((hours.grandTotalMinutes / 60) * 100) / 100}
+              />
             </div>
             <ExportLinks reportType="hours" query={query} />
           </div>
 
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Guru</TableHead>
-                  <TableHead>Total Sesi</TableHead>
-                  <TableHead>Hadir</TableHead>
-                  <TableHead>Total Jam</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hours.rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      Tidak ada data pada periode ini.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  hours.rows.map((row) => (
-                    <TableRow key={row.teacherId}>
-                      <TableCell>{row.teacherName}</TableCell>
-                      <TableCell>{row.totalSessions}</TableCell>
-                      <TableCell>{row.hadirSessions}</TableCell>
-                      <TableCell>{row.totalHours}</TableCell>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Guru</TableHead>
+                      <TableHead className="text-right">Total Sesi</TableHead>
+                      <TableHead className="text-right">Hadir</TableHead>
+                      <TableHead className="text-right">Total Jam</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {hours.rows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                          Tidak ada data pada periode ini.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      hours.rows.map((row) => (
+                        <TableRow key={row.teacherId}>
+                          <TableCell className="font-medium">{row.teacherName}</TableCell>
+                          <TableCell className="text-right">{row.totalSessions}</TableCell>
+                          <TableCell className="text-right">{row.hadirSessions}</TableCell>
+                          <TableCell className="text-right">{row.totalHours}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="progress" className="flex flex-col gap-4 pt-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-foreground">
-              Total Murid: {progress.rows.length}
-            </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <StatTile label="Total Murid" value={progress.rows.length} />
             <ExportLinks reportType="progress" query={query} />
           </div>
 
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Murid</TableHead>
-                  <TableHead>Total Sesi</TableHead>
-                  <TableHead>Hadir</TableHead>
-                  <TableHead>Laporan</TableHead>
-                  <TableHead>Laporan Terakhir</TableHead>
-                  <TableHead>Nilai Terakhir</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {progress.rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Tidak ada data pada periode ini.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  progress.rows.map((row) => (
-                    <TableRow key={row.studentId}>
-                      <TableCell>{row.studentName}</TableCell>
-                      <TableCell>{row.totalSessions}</TableCell>
-                      <TableCell>{row.hadirSessions}</TableCell>
-                      <TableCell>{row.reportCount}</TableCell>
-                      <TableCell>{row.latestReportDate ?? "-"}</TableCell>
-                      <TableCell>{row.latestGrade ?? "-"}</TableCell>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Murid</TableHead>
+                      <TableHead className="text-right">Total Sesi</TableHead>
+                      <TableHead className="text-right">Hadir</TableHead>
+                      <TableHead className="text-right">Laporan</TableHead>
+                      <TableHead>Laporan Terakhir</TableHead>
+                      <TableHead>Nilai Terakhir</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {progress.rows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          Tidak ada data pada periode ini.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      progress.rows.map((row) => (
+                        <TableRow key={row.studentId}>
+                          <TableCell className="font-medium">{row.studentName}</TableCell>
+                          <TableCell className="text-right">{row.totalSessions}</TableCell>
+                          <TableCell className="text-right">{row.hadirSessions}</TableCell>
+                          <TableCell className="text-right">{row.reportCount}</TableCell>
+                          <TableCell>{row.latestReportDate ?? "-"}</TableCell>
+                          <TableCell>{row.latestGrade ?? "-"}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="payroll" className="flex flex-col gap-4 pt-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-foreground">
-              Grand Total: {formatRupiah(payroll.grandTotal)}
-            </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <StatTile label="Grand Total" value={formatRupiah(payroll.grandTotal)} />
             <ExportLinks reportType="payroll" query={query} />
           </div>
 
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Guru</TableHead>
-                  <TableHead>Periode</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payroll.rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      Tidak ada data pada periode ini.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  payroll.rows.map((row) => (
-                    <TableRow key={row.payrollId}>
-                      <TableCell>{row.teacherName}</TableCell>
-                      <TableCell>{row.period}</TableCell>
-                      <TableCell>{row.statusLabel}</TableCell>
-                      <TableCell>{formatRupiah(row.total)}</TableCell>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Guru</TableHead>
+                      <TableHead>Periode</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {payroll.rows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                          Tidak ada data pada periode ini.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      payroll.rows.map((row) => (
+                        <TableRow key={row.payrollId}>
+                          <TableCell className="font-medium">{row.teacherName}</TableCell>
+                          <TableCell>{row.period}</TableCell>
+                          <TableCell>
+                            <PayrollStatusBadge status={row.status} />
+                          </TableCell>
+                          <TableCell className="text-right">{formatRupiah(row.total)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

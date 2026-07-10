@@ -1,4 +1,4 @@
-import type { PayrollStatus } from "@prisma/client";
+import type { ClassType, PayrollStatus } from "@prisma/client";
 
 /**
  * Shape consumed by the payroll export builders (`excel.ts`, `pdf.tsx`).
@@ -11,6 +11,10 @@ export type PayrollExportItem = {
   date: Date;
   studentName: string;
   startTime: string;
+  classType: ClassType;
+  /** "Pertemuan ke-N" for this session, or `null` if no meeting number
+   * applies (e.g. the session was RESCHEDULE/CANCEL). */
+  meetingNumber: number | null;
   rate: number;
 };
 

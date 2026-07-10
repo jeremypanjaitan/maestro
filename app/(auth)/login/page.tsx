@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { Music } from "lucide-react";
 import { toast } from "sonner";
 
 import { authenticate } from "@/lib/actions/auth";
@@ -36,46 +37,59 @@ export default function LoginPage() {
   }, [state?.error]);
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Masuk ke Maestro</CardTitle>
-          <CardDescription>
-            Masukkan email dan password akun Anda.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={formAction} className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="nama@contoh.com"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </div>
-            {state?.error ? (
-              <p className="text-sm text-destructive" role="alert">
-                {state.error}
-              </p>
-            ) : null}
-            <SubmitButton />
-          </form>
-        </CardContent>
-      </Card>
+    <div className="grid min-h-svh place-items-center bg-muted/30 p-4">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Music className="size-6" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight">Maestro</h1>
+            <p className="text-sm text-muted-foreground">
+              Music School Management
+            </p>
+          </div>
+        </div>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Masuk ke Maestro</CardTitle>
+            <CardDescription>
+              Masukkan email dan password akun Anda.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={formAction} className="flex flex-col gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="nama@contoh.com"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+              {state?.error ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {state.error}
+                </p>
+              ) : null}
+              <SubmitButton />
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -6,8 +6,8 @@ import { toast } from "sonner";
 
 import { cancelSession, updateSessionStatus } from "@/lib/actions/session";
 import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SessionStatusBadge } from "@/components/status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,15 +36,6 @@ const ASSIGNABLE_STATUSES: SessionStatus[] = [
   "MURID_TIDAK_HADIR",
   "GURU_TIDAK_HADIR",
 ];
-
-const STATUS_BADGE_VARIANT: Record<SessionStatus, "default" | "outline" | "secondary" | "destructive"> = {
-  SCHEDULED: "outline",
-  HADIR: "default",
-  MURID_TIDAK_HADIR: "secondary",
-  GURU_TIDAK_HADIR: "secondary",
-  RESCHEDULE: "secondary",
-  CANCEL: "destructive",
-};
 
 export type AttendanceControlsProps = {
   sessionId: string;
@@ -95,7 +86,7 @@ export function AttendanceControls({ sessionId, status }: AttendanceControlsProp
   }
 
   if (locked) {
-    return <Badge variant={STATUS_BADGE_VARIANT[status]}>{SESSION_STATUS_LABELS[status]}</Badge>;
+    return <SessionStatusBadge status={status} />;
   }
 
   return (

@@ -1,4 +1,4 @@
-import type { PayrollStatus, SessionStatus } from '@prisma/client'
+import type { ClassType, PayrollStatus, SessionStatus } from '@prisma/client'
 
 export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
   SCHEDULED: 'Terjadwal',
@@ -15,4 +15,9 @@ export const PAYROLL_STATUS_LABELS: Record<PayrollStatus, string> = {
   DRAFT: 'Draft',
   APPROVED: 'Disetujui',
   PAID: 'Dibayar',
+}
+
+export const CLASS_TYPE_LABELS: Record<ClassType, string> = {
+  PRIVATE: 'Privat',
+  GROUP: 'Grup',
 }

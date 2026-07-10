@@ -1,38 +1,21 @@
-import type { SessionStatus } from "@prisma/client";
 import { Users, GraduationCap, CalendarClock, Wallet } from "lucide-react";
 
 import { getAdminDashboard } from "@/lib/queries/dashboard";
+import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { Badge } from "@/components/ui/badge";
+import { SessionStatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
 import { formatPeriod, formatRupiah } from "@/lib/utils";
-
-const STATUS_BADGE_VARIANT: Record<
-  SessionStatus,
-  "default" | "outline" | "secondary" | "destructive"
-> = {
-  SCHEDULED: "outline",
-  HADIR: "default",
-  MURID_TIDAK_HADIR: "secondary",
-  GURU_TIDAK_HADIR: "secondary",
-  RESCHEDULE: "secondary",
-  CANCEL: "destructive",
-};
 
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboard();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Dashboard Admin
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Ringkasan sekolah musik hari ini.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Dashboard Admin"
+        description="Ringkasan sekolah musik hari ini."
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -83,9 +66,7 @@ export default async function AdminDashboardPage() {
                         Guru: {s.teacher.name}
                       </p>
                     </div>
-                    <Badge variant={STATUS_BADGE_VARIANT[s.status]}>
-                      {SESSION_STATUS_LABELS[s.status]}
-                    </Badge>
+                    <SessionStatusBadge status={s.status} />
                   </li>
                 ))}
               </ul>

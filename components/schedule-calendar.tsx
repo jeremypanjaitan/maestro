@@ -3,9 +3,9 @@
 import Link from "next/link";
 import type { SessionStatus } from "@prisma/client";
 
-import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { SessionStatusBadge } from "@/components/status-badge";
 
 export type CalendarSession = {
   id: string;
@@ -29,18 +29,6 @@ type ScheduleCalendarProps = {
   nextWeekHref: string;
   currentWeekHref: string;
   isCurrentWeek: boolean;
-};
-
-const STATUS_BADGE_VARIANT: Record<
-  SessionStatus,
-  "default" | "outline" | "secondary" | "destructive"
-> = {
-  SCHEDULED: "outline",
-  HADIR: "default",
-  MURID_TIDAK_HADIR: "secondary",
-  GURU_TIDAK_HADIR: "secondary",
-  RESCHEDULE: "secondary",
-  CANCEL: "destructive",
 };
 
 const DAY_NAMES = [
@@ -118,90 +106,90 @@ export function ScheduleCalendar({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm font-medium text-foreground">
-          {formatWeekRangeLabel(weekStart, weekEnd)}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={prevWeekHref}>Minggu Sebelumnya</Link>
-          </Button>
-          {!isCurrentWeek && (
+    <Card>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-medium text-foreground">
+            {formatWeekRangeLabel(weekStart, weekEnd)}
+          </div>
+          <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href={currentWeekHref}>Minggu Ini</Link>
+              <Link href={prevWeekHref}>Minggu Sebelumnya</Link>
             </Button>
-          )}
-          <Button asChild variant="outline" size="sm">
-            <Link href={nextWeekHref}>Minggu Berikutnya</Link>
-          </Button>
+            {!isCurrentWeek && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={currentWeekHref}>Minggu Ini</Link>
+              </Button>
+            )}
+            <Button asChild variant="outline" size="sm">
+              <Link href={nextWeekHref}>Minggu Berikutnya</Link>
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
-        {weekDates.map((date, index) => {
-          const daySessions = (sessionsByDate.get(date) ?? []).slice();
-          const { day, month } = parseDateParts(date);
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
+          {weekDates.map((date, index) => {
+            const daySessions = (sessionsByDate.get(date) ?? []).slice();
+            const { day, month } = parseDateParts(date);
 
-          return (
-            <div
-              key={date}
-              className="flex flex-col gap-2 rounded-lg border border-border p-3"
-            >
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm font-semibold text-foreground">
-                  {DAY_NAMES[index]}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {day} {MONTH_NAMES[month]}
-                </span>
-              </div>
+            return (
+              <div
+                key={date}
+                className="flex flex-col gap-2 rounded-lg border border-border p-3"
+              >
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-semibold text-foreground">
+                    {DAY_NAMES[index]}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {day} {MONTH_NAMES[month]}
+                  </span>
+                </div>
 
-              {daySessions.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Tidak ada sesi
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {daySessions.map((session) => (
-                    <li
-                      key={session.id}
-                      className="flex flex-col gap-1 rounded-md border border-border bg-card p-2 text-xs"
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-medium text-foreground">
-                          {session.startTime}
-                        </span>
-                        <Badge variant={STATUS_BADGE_VARIANT[session.status]}>
-                          {SESSION_STATUS_LABELS[session.status]}
-                        </Badge>
-                      </div>
-                      {viewMode === "admin" ? (
-                        <>
+                {daySessions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Tidak ada sesi
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {daySessions.map((session) => (
+                      <li
+                        key={session.id}
+                        className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-medium text-foreground">
+                            {session.startTime}
+                          </span>
+                          <SessionStatusBadge status={session.status} />
+                        </div>
+                        {viewMode === "admin" ? (
+                          <>
+                            <span className="text-foreground">
+                              {session.student.name}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {session.teacher.name}
+                            </span>
+                          </>
+                        ) : (
                           <span className="text-foreground">
                             {session.student.name}
                           </span>
-                          <span className="text-muted-foreground">
-                            {session.teacher.name}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-foreground">
-                          {session.student.name}
+                        )}
+                        <span className="text-muted-foreground">
+                          {session.instrument} &middot; {session.durationMinutes}
+                          m
                         </span>
-                      )}
-                      <span className="text-muted-foreground">
-                        {session.instrument} &middot; {session.durationMinutes}
-                        m
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

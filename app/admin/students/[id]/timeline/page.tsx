@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getStudentTimeline } from "@/lib/queries/history";
+import { PageHeader } from "@/components/page-header";
 import { StudentTimeline } from "@/components/student-timeline";
 
 type StudentTimelinePageProps = {
@@ -26,13 +27,11 @@ export default async function StudentTimelinePage({ params }: StudentTimelinePag
   const { student, entries } = result.timeline;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Riwayat Perkembangan — {student.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">{student.instrument}</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`Riwayat Perkembangan — ${student.name}`}
+        description={student.instrument}
+      />
 
       <StudentTimeline entries={entries} />
     </div>

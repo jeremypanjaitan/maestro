@@ -143,6 +143,8 @@ export async function generateSessions(
     dayOfWeek: s.dayOfWeek,
     startTime: s.startTime,
     durationMinutes: s.durationMinutes,
+    classType: s.classType,
+    rate: s.rate,
   }));
 
   const existingSessions = await prisma.session.findMany({
@@ -168,6 +170,8 @@ export async function generateSessions(
         date: toDbDate(p.date),
         startTime: p.startTime,
         durationMinutes: p.durationMinutes,
+        classType: p.classType,
+        rate: p.rate,
         status: "SCHEDULED",
       })),
     });
@@ -275,7 +279,7 @@ export async function rescheduleSession(
       status: { notIn: ["CANCEL", "RESCHEDULE"] },
       id: { not: original.id },
     },
-    select: { teacherId: true, studentId: true, startTime: true, durationMinutes: true },
+    select: { teacherId: true, studentId: true, startTime: true, durationMinutes: true, classType: true },
   });
 
   const candidate: Slot = {
@@ -283,6 +287,7 @@ export async function rescheduleSession(
     studentId: original.studentId,
     startTime: newStartTime,
     durationMinutes: original.durationMinutes,
+    classType: original.classType,
   };
 
   if (hasConflict(candidate, sameDaySessions)) {
@@ -298,6 +303,8 @@ export async function rescheduleSession(
         date: newDate,
         startTime: newStartTime,
         durationMinutes: original.durationMinutes,
+        classType: original.classType,
+        rate: original.rate,
         status: "SCHEDULED",
       },
     });

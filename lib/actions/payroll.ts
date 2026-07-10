@@ -39,9 +39,11 @@ const ALLOWED_TRANSITIONS: Record<PayrollStatus, PayrollStatus[]> = {
 };
 
 /**
- * (Re)generates a teacher's payroll for a given month/year: sums their HADIR
- * sessions in that period at `ratePerSession` and upserts a Payroll + its
- * PayrollItems. Idempotent — calling it again for the same period replaces
+ * (Re)generates a teacher's payroll for a given month/year: sums the
+ * per-session `rate` snapshot (classType + rate captured at session-creation
+ * time, NOT a single teacher-wide rate) over their HADIR sessions in that
+ * period, and upserts a Payroll + its PayrollItems. Idempotent — calling it
+ * again for the same period replaces
  * the items rather than duplicating them, and resets the status to DRAFT
  * (unless the existing payroll is already PAID, in which case it refuses).
  */
@@ -62,7 +64,7 @@ export async function generatePayroll(
 
   const teacher = await prisma.teacher.findUnique({
     where: { id: teacherId },
-    select: { ratePerSession: true },
+    select: { id: true },
   });
   if (!teacher) {
     return { ok: false, error: "Guru tidak ditemukan" };
@@ -96,12 +98,11 @@ export async function generatePayroll(
       status: "HADIR",
       date: { gte: periodStart, lte: periodEnd },
     },
-    select: { id: true, status: true, date: true },
+    select: { id: true, status: true, rate: true },
   });
 
   const { items, total } = computePayroll(
-    sessions.map((s) => ({ sessionId: s.id, status: s.status, date: s.date })),
-    teacher.ratePerSession,
+    sessions.map((s) => ({ sessionId: s.id, status: s.status, rate: s.rate })),
   );
 
   let payroll;

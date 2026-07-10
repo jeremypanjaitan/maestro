@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ClassType } from "@prisma/client";
 import { toast } from "sonner";
 
 import { createSchedule, updateSchedule } from "@/lib/actions/schedule";
 import { DAY_LABELS } from "@/lib/validations/schedule";
+import { CLASS_TYPE_LABELS } from "@/lib/domain/constants";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -24,7 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type ScheduleTeacherOption = { id: string; name: string };
+export type ScheduleTeacherOption = {
+  id: string;
+  name: string;
+  ratePerSession: number;
+  defaultGroupRate: number | null;
+};
 export type ScheduleStudentOption = { id: string; name: string; instrument: string };
 
 export type ScheduleRecord = {
@@ -35,6 +43,8 @@ export type ScheduleRecord = {
   dayOfWeek: number;
   startTime: string;
   durationMinutes: number;
+  classType: ClassType;
+  rate: number;
   active: boolean;
 };
 
@@ -54,6 +64,8 @@ const EMPTY_FORM = {
   dayOfWeek: "1",
   startTime: "",
   durationMinutes: "60",
+  classType: "PRIVATE" as ClassType,
+  rate: "",
 };
 
 export function ScheduleForm({
@@ -79,6 +91,8 @@ export function ScheduleForm({
         dayOfWeek: String(schedule.dayOfWeek),
         startTime: schedule.startTime,
         durationMinutes: String(schedule.durationMinutes),
+        classType: schedule.classType,
+        rate: String(schedule.rate),
       });
     } else {
       setForm(EMPTY_FORM);
@@ -96,6 +110,33 @@ export function ScheduleForm({
     }));
   }
 
+  /** Looks up the teacher's default rate for a class type — `ratePerSession`
+   * for PRIVATE, `defaultGroupRate` for GROUP — used to prefill (and
+   * re-prefill) the rate field. Returns "" if the teacher or its default is
+   * unknown, so the admin has to fill it in manually. */
+  function defaultRateFor(teacherId: string, classType: ClassType): string {
+    const teacher = teachers.find((t) => t.id === teacherId);
+    if (!teacher) return "";
+    const rate = classType === "GROUP" ? teacher.defaultGroupRate : teacher.ratePerSession;
+    return rate != null ? String(rate) : "";
+  }
+
+  function handleTeacherChange(teacherId: string) {
+    setForm((prev) => ({
+      ...prev,
+      teacherId,
+      rate: defaultRateFor(teacherId, prev.classType),
+    }));
+  }
+
+  function handleClassTypeChange(classType: ClassType) {
+    setForm((prev) => ({
+      ...prev,
+      classType,
+      rate: defaultRateFor(prev.teacherId, classType),
+    }));
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsPending(true);
@@ -107,6 +148,8 @@ export function ScheduleForm({
       dayOfWeek: form.dayOfWeek,
       startTime: form.startTime,
       durationMinutes: form.durationMinutes,
+      classType: form.classType,
+      rate: form.rate,
     };
 
     const result = isEditing
@@ -136,10 +179,7 @@ export function ScheduleForm({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-2">
             <Label>Guru</Label>
-            <Select
-              value={form.teacherId}
-              onValueChange={(value) => setForm((prev) => ({ ...prev, teacherId: value }))}
-            >
+            <Select value={form.teacherId} onValueChange={handleTeacherChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Pilih guru" />
               </SelectTrigger>
@@ -179,6 +219,37 @@ export function ScheduleForm({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Tipe Kelas</Label>
+              <Select
+                value={form.classType}
+                onValueChange={(value) => handleClassTypeChange(value as ClassType)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PRIVATE">{CLASS_TYPE_LABELS.PRIVATE}</SelectItem>
+                  <SelectItem value="GROUP">{CLASS_TYPE_LABELS.GROUP}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rate">Tarif per sesi (Rp)</Label>
+              <Input
+                id="rate"
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={form.rate}
+                onChange={(e) => setForm((prev) => ({ ...prev, rate: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
+
           <div className="grid gap-2">
             <Label>Hari</Label>
             <Select
@@ -214,8 +285,9 @@ export function ScheduleForm({
               <Input
                 id="durationMinutes"
                 type="number"
-                min={1}
+                min={15}
                 step={15}
+                inputMode="numeric"
                 value={form.durationMinutes}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, durationMinutes: e.target.value }))
@@ -226,6 +298,11 @@ export function ScheduleForm({
           </div>
 
           <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isPending}>
+                Batal
+              </Button>
+            </DialogClose>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Menyimpan..." : "Simpan"}
             </Button>

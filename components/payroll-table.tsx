@@ -9,8 +9,9 @@ import { toast } from "sonner";
 import { setPayrollStatus } from "@/lib/actions/payroll";
 import { PAYROLL_STATUS_LABELS } from "@/lib/domain/constants";
 import { formatPeriod, formatRupiah } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { PayrollStatusBadge } from "@/components/status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,12 +51,6 @@ type PayrollTableProps = {
   payrolls: PayrollRecord[];
 };
 
-const STATUS_BADGE_VARIANT: Record<PayrollStatus, "default" | "outline" | "secondary"> = {
-  DRAFT: "outline",
-  APPROVED: "secondary",
-  PAID: "default",
-};
-
 /** Row action target: which payroll, and which status it would move to. */
 type TransitionTarget = { payroll: PayrollRecord; nextStatus: PayrollStatus };
 
@@ -81,74 +76,76 @@ export function PayrollTable({ payrolls }: PayrollTableProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Guru</TableHead>
-              <TableHead>Periode</TableHead>
-              <TableHead>Jumlah Sesi</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {payrolls.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  Belum ada payroll.
-                </TableCell>
-              </TableRow>
-            ) : (
-              payrolls.map((payroll) => (
-                <TableRow key={payroll.id}>
-                  <TableCell className="font-medium">{payroll.teacherName}</TableCell>
-                  <TableCell>{formatPeriod(payroll.periodMonth, payroll.periodYear)}</TableCell>
-                  <TableCell>{payroll.itemCount}</TableCell>
-                  <TableCell>{formatRupiah(payroll.total)}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_BADGE_VARIANT[payroll.status]}>
-                      {PAYROLL_STATUS_LABELS[payroll.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm">
-                          <MoreHorizontal />
-                          <span className="sr-only">Aksi</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/payroll/${payroll.id}`}>Lihat detail</Link>
-                        </DropdownMenuItem>
-                        {payroll.status === "DRAFT" ? (
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              setTransitionTarget({ payroll, nextStatus: "APPROVED" })
-                            }
-                          >
-                            Approve
-                          </DropdownMenuItem>
-                        ) : null}
-                        {payroll.status === "APPROVED" ? (
-                          <DropdownMenuItem
-                            onSelect={() => setTransitionTarget({ payroll, nextStatus: "PAID" })}
-                          >
-                            Tandai Dibayar
-                          </DropdownMenuItem>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Guru</TableHead>
+                  <TableHead>Periode</TableHead>
+                  <TableHead>Jumlah Sesi</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {payrolls.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      Belum ada payroll.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  payrolls.map((payroll) => (
+                    <TableRow key={payroll.id}>
+                      <TableCell className="font-medium">{payroll.teacherName}</TableCell>
+                      <TableCell>{formatPeriod(payroll.periodMonth, payroll.periodYear)}</TableCell>
+                      <TableCell>{payroll.itemCount}</TableCell>
+                      <TableCell className="text-right">{formatRupiah(payroll.total)}</TableCell>
+                      <TableCell>
+                        <PayrollStatusBadge status={payroll.status} />
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm">
+                              <MoreHorizontal />
+                              <span className="sr-only">Aksi</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/payroll/${payroll.id}`}>Lihat detail</Link>
+                            </DropdownMenuItem>
+                            {payroll.status === "DRAFT" ? (
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  setTransitionTarget({ payroll, nextStatus: "APPROVED" })
+                                }
+                              >
+                                Approve
+                              </DropdownMenuItem>
+                            ) : null}
+                            {payroll.status === "APPROVED" ? (
+                              <DropdownMenuItem
+                                onSelect={() => setTransitionTarget({ payroll, nextStatus: "PAID" })}
+                              >
+                                Tandai Dibayar
+                              </DropdownMenuItem>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <AlertDialog
         open={transitionTarget !== null}

@@ -6,6 +6,8 @@ export type ScheduleInput = {
   dayOfWeek: number;
   startTime: string;
   durationMinutes: number;
+  classType: 'PRIVATE' | 'GROUP';
+  rate: number;
 };
 
 export type PlannedSession = {
@@ -15,6 +17,8 @@ export type PlannedSession = {
   date: string;
   startTime: string;
   durationMinutes: number;
+  classType: 'PRIVATE' | 'GROUP';
+  rate: number;
 };
 
 /**
@@ -65,7 +69,9 @@ export function planSessions(
             studentId: schedule.studentId,
             date: dateStr,
             startTime: schedule.startTime,
-            durationMinutes: schedule.durationMinutes
+            durationMinutes: schedule.durationMinutes,
+            classType: schedule.classType,
+            rate: schedule.rate
           });
         }
       }

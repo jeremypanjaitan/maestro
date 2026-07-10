@@ -1,19 +1,9 @@
 import { FileAudio } from "lucide-react";
-import type { SessionStatus } from "@prisma/client";
 
 import { buildDataUrl } from "@/lib/files";
 import type { TimelineEntry } from "@/lib/queries/history";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-
-const STATUS_BADGE_VARIANT: Record<SessionStatus, "default" | "outline" | "secondary" | "destructive"> = {
-  SCHEDULED: "outline",
-  HADIR: "default",
-  MURID_TIDAK_HADIR: "secondary",
-  GURU_TIDAK_HADIR: "secondary",
-  RESCHEDULE: "secondary",
-  CANCEL: "destructive",
-};
+import { SessionStatusBadge } from "@/components/status-badge";
 
 type StudentTimelineProps = {
   entries: TimelineEntry[];
@@ -51,7 +41,7 @@ export function StudentTimeline({ entries }: StudentTimelineProps) {
                 <span className="text-sm font-medium text-foreground">{entry.date}</span>
                 <span className="text-sm text-muted-foreground">{entry.startTime}</span>
               </div>
-              <Badge variant={STATUS_BADGE_VARIANT[entry.status]}>{entry.statusLabel}</Badge>
+              <SessionStatusBadge status={entry.status} />
             </div>
             <p className="text-xs text-muted-foreground">Guru: {entry.teacherName}</p>
 

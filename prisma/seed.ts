@@ -69,10 +69,14 @@ async function main() {
   const guruPassword = "guru123";
   const guruPasswordHash = await hashPassword(guruPassword);
 
+  // `ratePerSession` is each teacher's DEFAULT PRIVATE rate; `defaultGroupRate`
+  // is their default GROUP rate. Both are only used to prefill the schedule
+  // form — the AUTHORITATIVE rate lives per-enrollment on `Schedule.rate`
+  // (see scheduleSeeds below, where private rates vary per student).
   const guruSeeds = [
-    { name: "Budi Santoso", email: "budi@maestro.test", instruments: ["Piano"], ratePerSession: 150000, phone: "081200000001" },
-    { name: "Siti Aminah", email: "siti@maestro.test", instruments: ["Guitar"], ratePerSession: 120000, phone: "081200000002" },
-    { name: "Rian Pratama", email: "rian@maestro.test", instruments: ["Drum", "Vocal"], ratePerSession: 100000, phone: "081200000003" },
+    { name: "Budi Santoso", email: "budi@maestro.test", instruments: ["Piano"], ratePerSession: 900000, defaultGroupRate: 500000, phone: "081200000001" },
+    { name: "Siti Aminah", email: "siti@maestro.test", instruments: ["Guitar"], ratePerSession: 900000, defaultGroupRate: 500000, phone: "081200000002" },
+    { name: "Rian Pratama", email: "rian@maestro.test", instruments: ["Drum", "Vocal"], ratePerSession: 900000, defaultGroupRate: 500000, phone: "081200000003" },
   ];
 
   const teachers = [];
@@ -90,6 +94,7 @@ async function main() {
         name: g.name,
         instruments: g.instruments,
         ratePerSession: g.ratePerSession,
+        defaultGroupRate: g.defaultGroupRate,
         phone: g.phone,
         status: "ACTIVE",
         userId: user.id,
@@ -111,6 +116,13 @@ async function main() {
     { name: "Fajar Ramadhan", instrument: "Drum", level: "Mahir", parentName: "Ibu Ramadhan", contact: "081300000006", learningTarget: "Improvisasi fill-in" },
     { name: "Gita Lestari", instrument: "Vocal", level: "Pemula", parentName: "Bapak Lestari", contact: "081300000007", learningTarget: "Teknik pernapasan" },
     { name: "Hendra Kusuma", instrument: "Vocal", level: "Menengah", parentName: "Ibu Kusuma", contact: "081300000008", learningTarget: "Kontrol pitch" },
+    // Group-class students (see scheduleSeeds): all three take Piano GROUP
+    // lessons with Budi at the same dayOfWeek + startTime — exercises the
+    // relaxed conflict rule (same teacher + overlapping time is OK when
+    // every side is GROUP).
+    { name: "Kevin Halim", instrument: "Piano", level: "Pemula", parentName: "Bapak Halim", contact: "081300000009", learningTarget: "Bermain dalam kelompok" },
+    { name: "Laras Ayu", instrument: "Piano", level: "Pemula", parentName: "Ibu Ayu", contact: "081300000010", learningTarget: "Bermain dalam kelompok" },
+    { name: "Made Wirawan", instrument: "Piano", level: "Pemula", parentName: "Bapak Wirawan", contact: "081300000011", learningTarget: "Bermain dalam kelompok" },
   ];
 
   const students = [];
@@ -128,7 +140,7 @@ async function main() {
     });
     students.push(student);
   }
-  const [andi, bella, citra, dian, eka, fajar, gita, hendra] = students;
+  const [andi, bella, citra, dian, eka, fajar, gita, hendra, kevin, laras, made] = students;
 
   // ---------------------------------------------------------------------
   // 5. Weekly schedules. dayOfWeek: 0=Sun..6=Sat, brief uses 1-5 (Mon-Fri).
@@ -136,17 +148,27 @@ async function main() {
   //    the same dayOfWeek + startTime.
   // ---------------------------------------------------------------------
   const scheduleSeeds = [
-    // Budi (Piano) — Andi, Bella
-    { teacher: teacherBudi, student: andi, instrument: "Piano", dayOfWeek: 1, startTime: "15:00", durationMinutes: 60 },
-    { teacher: teacherBudi, student: bella, instrument: "Piano", dayOfWeek: 3, startTime: "16:00", durationMinutes: 60 },
-    // Siti (Guitar) — Citra, Dian
-    { teacher: teacherSiti, student: citra, instrument: "Guitar", dayOfWeek: 2, startTime: "15:00", durationMinutes: 60 },
-    { teacher: teacherSiti, student: dian, instrument: "Guitar", dayOfWeek: 4, startTime: "16:00", durationMinutes: 60 },
-    // Rian (Drum, Vocal) — Eka, Fajar, Gita, Hendra
-    { teacher: teacherRian, student: eka, instrument: "Drum", dayOfWeek: 1, startTime: "17:00", durationMinutes: 60 },
-    { teacher: teacherRian, student: fajar, instrument: "Drum", dayOfWeek: 5, startTime: "15:00", durationMinutes: 60 },
-    { teacher: teacherRian, student: gita, instrument: "Vocal", dayOfWeek: 2, startTime: "16:00", durationMinutes: 60 },
-    { teacher: teacherRian, student: hendra, instrument: "Vocal", dayOfWeek: 4, startTime: "17:00", durationMinutes: 60 },
+    // Budi (Piano) — Andi (standard private rate), Bella (discounted private
+    // rate — same teacher/instrument, independent rate per enrollment).
+    { teacher: teacherBudi, student: andi, instrument: "Piano", dayOfWeek: 1, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    { teacher: teacherBudi, student: bella, instrument: "Piano", dayOfWeek: 3, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 450000 },
+    // Siti (Guitar) — Citra, Dian, both standard private rate.
+    { teacher: teacherSiti, student: citra, instrument: "Guitar", dayOfWeek: 2, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    { teacher: teacherSiti, student: dian, instrument: "Guitar", dayOfWeek: 4, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    // Rian (Drum, Vocal) — Eka, Fajar, Gita, Hendra, all standard private rate.
+    { teacher: teacherRian, student: eka, instrument: "Drum", dayOfWeek: 1, startTime: "17:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    { teacher: teacherRian, student: fajar, instrument: "Drum", dayOfWeek: 5, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    { teacher: teacherRian, student: gita, instrument: "Vocal", dayOfWeek: 2, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    { teacher: teacherRian, student: hendra, instrument: "Vocal", dayOfWeek: 4, startTime: "17:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    // GROUP class: Budi teaches Kevin, Laras, and Made together — same
+    // teacher + same dayOfWeek + same startTime, each their own
+    // enrollment/session, each paid `rate` per attending student. This is
+    // the relaxed-conflict case: multiple GROUP schedules for the same
+    // teacher at the same slot are allowed (no same-student, no PRIVATE
+    // overlap involved), unlike two PRIVATE schedules which would conflict.
+    { teacher: teacherBudi, student: kevin, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, rate: 500000 },
+    { teacher: teacherBudi, student: laras, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, rate: 500000 },
+    { teacher: teacherBudi, student: made, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, rate: 500000 },
   ];
 
   const schedules = [];
@@ -159,6 +181,8 @@ async function main() {
         dayOfWeek: s.dayOfWeek,
         startTime: s.startTime,
         durationMinutes: s.durationMinutes,
+        classType: s.classType,
+        rate: s.rate,
         active: true,
       },
     });
@@ -180,6 +204,8 @@ async function main() {
     dayOfWeek: s.dayOfWeek,
     startTime: s.startTime,
     durationMinutes: s.durationMinutes,
+    classType: s.classType,
+    rate: s.rate,
   }));
 
   const planned = planSessions(scheduleInputs, firstDay, lastDay, new Set());
@@ -215,6 +241,8 @@ async function main() {
       date: toDbDate(p.date),
       startTime: p.startTime,
       durationMinutes: p.durationMinutes,
+      classType: p.classType,
+      rate: p.rate,
       status: p.status,
     })),
   });
@@ -269,8 +297,7 @@ async function main() {
   // ---------------------------------------------------------------------
   const budiHadirSessions = hadirSessions.filter((s) => s.teacherId === teacherBudi.id);
   const payrollComputation = computePayroll(
-    budiHadirSessions.map((s) => ({ sessionId: s.id, status: s.status, date: s.date })),
-    teacherBudi.ratePerSession,
+    budiHadirSessions.map((s) => ({ sessionId: s.id, status: s.status, rate: s.rate })),
   );
 
   const payroll = await prisma.payroll.create({
@@ -305,11 +332,16 @@ async function main() {
     payrolls: await prisma.payroll.count(),
   };
 
+  const budiRateSum = budiHadirSessions.reduce((sum, s) => sum + s.rate, 0);
+
   console.log("\n=== Seed complete ===");
   console.log(`Admin login:  email=${admin.email}  password=${adminPassword}`);
   console.log(`Guru logins:  ${guruSeeds.map((g) => g.email).join(", ")}  password=${guruPassword}`);
   console.log("\nCounts:");
   console.table(counts);
+  console.log(
+    `Quick check — Budi HADIR session rate sum = ${budiRateSum}, payroll.total = ${payroll.total} (match: ${budiRateSum === payroll.total})`,
+  );
   console.log(`Attachment created: ${attachmentCreated}`);
   console.log(
     `Payroll DRAFT: teacher=${teacherBudi.name} periodMonth=${payroll.periodMonth} periodYear=${payroll.periodYear} total=${payroll.total} items=${payroll.items.length}`,

@@ -184,8 +184,11 @@ export async function getGuruDashboard(): Promise<GuruDashboardData> {
     student: s.student,
   }));
 
-  const hadirCountThisMonth = monthSessions.filter((s) => s.status === "HADIR").length;
-  const estimatedHonor = hadirCountThisMonth * teacher.ratePerSession;
+  const hadirSessionsThisMonth = monthSessions.filter((s) => s.status === "HADIR");
+  const hadirCountThisMonth = hadirSessionsThisMonth.length;
+  // Sum of each HADIR session's own rate snapshot (classType + rate can vary
+  // per enrollment), not count * a single teacher-wide rate.
+  const estimatedHonor = hadirSessionsThisMonth.reduce((sum, s) => sum + s.rate, 0);
 
   const progressMap = new Map<string, GuruStudentProgress>();
   for (const s of monthSessions) {

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { GeneratePayrollDialog } from "@/components/generate-payroll-dialog";
+import { PageHeader } from "@/components/page-header";
 import { PayrollTable, type PayrollRecord } from "@/components/payroll-table";
 
 export default async function AdminPayrollPage() {
@@ -29,13 +30,13 @@ export default async function AdminPayrollPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Payroll
-        </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Payroll"
+        description="Gaji guru dihitung dari sesi HADIR pada periode terpilih."
+      >
         <GeneratePayrollDialog teachers={teachers} />
-      </div>
+      </PageHeader>
 
       <PayrollTable payrolls={payrollRecords} />
     </div>
