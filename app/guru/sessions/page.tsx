@@ -1,6 +1,9 @@
+import Link from "next/link";
+
 import { getGuruSessions } from "@/lib/queries/calendar";
 import { AttendanceControls } from "@/components/attendance-controls";
 import { RescheduleDialog } from "@/components/reschedule-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -53,12 +56,17 @@ export default async function GuruSessionsPage() {
                       <AttendanceControls sessionId={session.id} status={session.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <RescheduleDialog
-                        sessionId={session.id}
-                        currentDate={session.date}
-                        currentStartTime={session.startTime}
-                        disabled={locked}
-                      />
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/guru/sessions/${session.id}/report`}>Laporan</Link>
+                        </Button>
+                        <RescheduleDialog
+                          sessionId={session.id}
+                          currentDate={session.date}
+                          currentStartTime={session.startTime}
+                          disabled={locked}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

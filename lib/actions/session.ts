@@ -11,7 +11,7 @@ import { hasConflict, type Slot } from "@/lib/domain/conflict";
 
 export type SessionActionResult = { ok: true } | { ok: false; error: string };
 
-type SessionAccessResult =
+export type SessionAccessResult =
   | { ok: true; session: Session }
   | { ok: false; error: string };
 
@@ -48,7 +48,7 @@ async function requireAdmin(): Promise<{ ok: false; error: string } | null> {
  * only on sessions where `session.teacherId === auth().user.teacherId`.
  * Everyone else (including unauthenticated callers) is denied.
  */
-async function requireSessionAccess(sessionId: string): Promise<SessionAccessResult> {
+export async function requireSessionAccess(sessionId: string): Promise<SessionAccessResult> {
   const authSession = await auth();
   if (!authSession?.user) {
     return { ok: false, error: "Tidak diizinkan" };
