@@ -285,8 +285,9 @@ export function ScheduleForm({
               <Input
                 id="durationMinutes"
                 type="number"
-                min={1}
+                min={15}
                 step={15}
+                inputMode="numeric"
                 value={form.durationMinutes}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, durationMinutes: e.target.value }))
