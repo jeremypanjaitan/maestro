@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Music } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { adminNav, guruNav } from "@/lib/nav";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -22,8 +23,13 @@ import {
 
 type Role = "ADMIN" | "GURU";
 
-function isActiveHref(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+/** Returns the single most-specific (longest) nav href that matches the
+ * current pathname, so a parent route (e.g. /admin/schedules) is NOT marked
+ * active when a more specific child (e.g. /admin/schedules/calendar) matches. */
+function bestActiveHref(pathname: string, hrefs: string[]) {
+  return hrefs
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
 }
 
 export function AppSidebar({
@@ -40,6 +46,10 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const items = role === "ADMIN" ? adminNav : guruNav;
+  const activeHref = bestActiveHref(
+    pathname,
+    items.map((i) => i.href),
+  );
 
   return (
     <Sidebar collapsible="icon">
@@ -67,7 +77,7 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active = isActiveHref(pathname, item.href);
+                const active = item.href === activeHref;
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.href}>
@@ -75,6 +85,9 @@ export function AppSidebar({
                       asChild
                       isActive={active}
                       tooltip={item.label}
+                      className={cn(
+                        "data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground data-[active=true]:hover:bg-sidebar-primary data-[active=true]:hover:text-sidebar-primary-foreground",
+                      )}
                     >
                       <Link href={item.href}>
                         {Icon ? <Icon /> : null}

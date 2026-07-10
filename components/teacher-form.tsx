@@ -187,7 +187,8 @@ export function TeacherForm({ open, onOpenChange, teacher }: TeacherFormProps) {
               id="ratePerSession"
               type="number"
               min={1}
-              step={1000}
+              step={1}
+              inputMode="numeric"
               value={form.ratePerSession}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, ratePerSession: e.target.value }))
