@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 
 import { planSessions, type ScheduleInput } from "../lib/domain/generateSessions";
 import { computePayroll } from "../lib/domain/payroll";
+import { toDbDate } from "../lib/domain/dbDate";
 
 const prisma = new PrismaClient();
 
@@ -211,7 +212,7 @@ async function main() {
       scheduleId: p.scheduleId,
       teacherId: p.teacherId,
       studentId: p.studentId,
-      date: parseLocalDate(p.date),
+      date: toDbDate(p.date),
       startTime: p.startTime,
       durationMinutes: p.durationMinutes,
       status: p.status,

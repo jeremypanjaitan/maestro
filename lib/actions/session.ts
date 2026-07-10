@@ -6,6 +6,7 @@ import { Prisma, type SessionStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { planSessions, type ScheduleInput } from "@/lib/domain/generateSessions";
+import { toDbDate, formatDbDate } from "@/lib/domain/dbDate";
 
 export type SessionActionResult = { ok: true } | { ok: false; error: string };
 
@@ -45,37 +46,11 @@ function isNotFoundError(error: unknown): boolean {
  * Parses a "YYYY-MM-DD" string into a *local* midnight Date. Used only for
  * in-memory date arithmetic (feeding `planSessions`'s from/to bounds and day
  * -of-week iteration) — never write this straight into a `@db.Date` column,
- * see `toDbDate` below.
+ * see `toDbDate` from `@/lib/domain/dbDate`.
  */
 function parseLocalDate(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(year, month - 1, day);
-}
-
-/**
- * Converts a "YYYY-MM-DD" string into the Date value that must be written to
- * (or compared against) a `@db.Date` Prisma column.
- *
- * Postgres `DATE` columns are timezone-less, but Prisma still round-trips
- * them through JS `Date` objects using their *UTC* fields. In a positive-UTC
- * -offset timezone (e.g. WIB, UTC+7), a locally-constructed midnight
- * (`new Date(y, m-1, d)`) is actually 17:00 UTC on the *previous* day, so
- * writing it lands the row on the wrong date. Constructing at UTC midnight
- * instead round-trips exactly. (Verified empirically against this project's
- * dev database — see task-14 report.)
- */
-function toDbDate(dateStr: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day));
-}
-
-/** Formats a `@db.Date` column value back to "YYYY-MM-DD" using UTC getters,
- * the mirror image of `toDbDate`. */
-function formatDbDate(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 /**
