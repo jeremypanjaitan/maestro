@@ -6,8 +6,10 @@ import { toast } from "sonner";
 
 import { toggleSchedule } from "@/lib/actions/schedule";
 import { DAY_LABELS } from "@/lib/validations/schedule";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,76 +83,80 @@ export function SchedulesTable({ schedules, teachers, students }: SchedulesTable
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Kelola Jadwal
-        </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Kelola Jadwal"
+        description="Jadwal mingguan berulang yang menjadi sumber generate sesi."
+      >
         <Button onClick={openCreateDialog}>
           <Plus />
           Tambah Jadwal
         </Button>
-      </div>
+      </PageHeader>
 
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Guru</TableHead>
-              <TableHead>Murid</TableHead>
-              <TableHead>Instrumen</TableHead>
-              <TableHead>Hari</TableHead>
-              <TableHead>Jam</TableHead>
-              <TableHead>Durasi</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {schedules.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  Belum ada jadwal.
-                </TableCell>
-              </TableRow>
-            ) : (
-              schedules.map((schedule) => (
-                <TableRow key={schedule.id}>
-                  <TableCell className="font-medium">{schedule.teacher.name}</TableCell>
-                  <TableCell>{schedule.student.name}</TableCell>
-                  <TableCell>{schedule.instrument}</TableCell>
-                  <TableCell>{DAY_LABELS[schedule.dayOfWeek]}</TableCell>
-                  <TableCell>{schedule.startTime}</TableCell>
-                  <TableCell>{schedule.durationMinutes} menit</TableCell>
-                  <TableCell>
-                    <Badge variant={schedule.active ? "default" : "outline"}>
-                      {schedule.active ? "Aktif" : "Nonaktif"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm">
-                          <MoreHorizontal />
-                          <span className="sr-only">Aksi</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => openEditDialog(schedule)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setToggleTarget(schedule)}>
-                          {schedule.active ? "Nonaktifkan" : "Aktifkan"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Guru</TableHead>
+                  <TableHead>Murid</TableHead>
+                  <TableHead>Instrumen</TableHead>
+                  <TableHead>Hari</TableHead>
+                  <TableHead>Jam</TableHead>
+                  <TableHead>Durasi</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {schedules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      Belum ada jadwal.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  schedules.map((schedule) => (
+                    <TableRow key={schedule.id}>
+                      <TableCell className="font-medium">{schedule.teacher.name}</TableCell>
+                      <TableCell>{schedule.student.name}</TableCell>
+                      <TableCell>{schedule.instrument}</TableCell>
+                      <TableCell>{DAY_LABELS[schedule.dayOfWeek]}</TableCell>
+                      <TableCell>{schedule.startTime}</TableCell>
+                      <TableCell>{schedule.durationMinutes} menit</TableCell>
+                      <TableCell>
+                        <Badge variant={schedule.active ? "default" : "outline"}>
+                          {schedule.active ? "Aktif" : "Nonaktif"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm">
+                              <MoreHorizontal />
+                              <span className="sr-only">Aksi</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => openEditDialog(schedule)}>
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setToggleTarget(schedule)}>
+                              {schedule.active ? "Nonaktifkan" : "Aktifkan"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <ScheduleForm
         open={formOpen}

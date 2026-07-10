@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { endOfMonth, format, startOfMonth } from "date-fns";
+import { CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { generateSessions } from "@/lib/actions/session";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -54,7 +56,10 @@ export function GenerateSessionsDialog() {
 
   return (
     <>
-      <Button onClick={() => handleOpenChange(true)}>Generate Sesi</Button>
+      <Button onClick={() => handleOpenChange(true)}>
+        <CalendarPlus />
+        Generate Sesi
+      </Button>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -94,6 +99,11 @@ export function GenerateSessionsDialog() {
           </div>
 
           <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isPending}>
+                Batal
+              </Button>
+            </DialogClose>
             <Button onClick={handleGenerate} disabled={isPending}>
               {isPending ? "Memproses..." : "Generate"}
             </Button>

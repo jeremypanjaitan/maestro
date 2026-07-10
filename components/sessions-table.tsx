@@ -8,8 +8,9 @@ import { toast } from "sonner";
 import { cancelSession, updateSessionStatus } from "@/lib/actions/session";
 import { DAY_LABELS } from "@/lib/validations/schedule";
 import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { SessionStatusBadge } from "@/components/status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,15 +60,6 @@ export type SessionRecord = {
 type SessionsTableProps = {
   sessions: SessionRecord[];
   teachers: SessionTeacherOption[];
-};
-
-const STATUS_BADGE_VARIANT: Record<SessionStatus, "default" | "outline" | "secondary" | "destructive"> = {
-  SCHEDULED: "outline",
-  HADIR: "default",
-  MURID_TIDAK_HADIR: "secondary",
-  GURU_TIDAK_HADIR: "secondary",
-  RESCHEDULE: "secondary",
-  CANCEL: "destructive",
 };
 
 /** Statuses settable from this table's row menu (RESCHEDULE excluded — that
@@ -190,75 +182,77 @@ export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tanggal</TableHead>
-              <TableHead>Hari</TableHead>
-              <TableHead>Jam</TableHead>
-              <TableHead>Guru</TableHead>
-              <TableHead>Murid</TableHead>
-              <TableHead>Instrumen</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  Belum ada sesi untuk filter ini.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((session) => (
-                <TableRow key={session.id}>
-                  <TableCell>{formatDate(session.date)}</TableCell>
-                  <TableCell>{DAY_LABELS[session.date.getUTCDay()]}</TableCell>
-                  <TableCell>{session.startTime}</TableCell>
-                  <TableCell className="font-medium">{session.teacher.name}</TableCell>
-                  <TableCell>{session.student.name}</TableCell>
-                  <TableCell>{session.instrument}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_BADGE_VARIANT[session.status]}>
-                      {SESSION_STATUS_LABELS[session.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm" disabled={isPending}>
-                          <MoreHorizontal />
-                          <span className="sr-only">Aksi</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {ASSIGNABLE_STATUSES.map((status) => (
-                          <DropdownMenuItem
-                            key={status}
-                            disabled={status === session.status}
-                            onSelect={() => handleStatusChange(session, status)}
-                          >
-                            {SESSION_STATUS_LABELS[status]}
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={session.status === "CANCEL"}
-                          onSelect={() => setCancelTarget(session)}
-                        >
-                          Batalkan sesi
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Hari</TableHead>
+                  <TableHead>Jam</TableHead>
+                  <TableHead>Guru</TableHead>
+                  <TableHead>Murid</TableHead>
+                  <TableHead>Instrumen</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      Belum ada sesi untuk filter ini.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((session) => (
+                    <TableRow key={session.id}>
+                      <TableCell>{formatDate(session.date)}</TableCell>
+                      <TableCell>{DAY_LABELS[session.date.getUTCDay()]}</TableCell>
+                      <TableCell>{session.startTime}</TableCell>
+                      <TableCell className="font-medium">{session.teacher.name}</TableCell>
+                      <TableCell>{session.student.name}</TableCell>
+                      <TableCell>{session.instrument}</TableCell>
+                      <TableCell>
+                        <SessionStatusBadge status={session.status} />
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm" disabled={isPending}>
+                              <MoreHorizontal />
+                              <span className="sr-only">Aksi</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {ASSIGNABLE_STATUSES.map((status) => (
+                              <DropdownMenuItem
+                                key={status}
+                                disabled={status === session.status}
+                                onSelect={() => handleStatusChange(session, status)}
+                              >
+                                {SESSION_STATUS_LABELS[status]}
+                              </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={session.status === "CANCEL"}
+                              onSelect={() => setCancelTarget(session)}
+                            >
+                              Batalkan sesi
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <AlertDialog
         open={cancelTarget !== null}

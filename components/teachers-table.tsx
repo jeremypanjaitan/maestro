@@ -6,8 +6,10 @@ import { toast } from "sonner";
 
 import { setTeacherStatus } from "@/lib/actions/teacher";
 import { formatRupiah } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,80 +74,84 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Kelola Guru
-        </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Kelola Guru"
+        description="Tambah, edit, dan kelola status guru pengajar."
+      >
         <Button onClick={openCreateDialog}>
           <Plus />
           Tambah Guru
         </Button>
-      </div>
+      </PageHeader>
 
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nama</TableHead>
-              <TableHead>Instrumen</TableHead>
-              <TableHead>Tarif/Sesi</TableHead>
-              <TableHead>Telepon</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {teachers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  Belum ada guru.
-                </TableCell>
-              </TableRow>
-            ) : (
-              teachers.map((teacher) => (
-                <TableRow key={teacher.id}>
-                  <TableCell className="font-medium">{teacher.name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {teacher.instruments.map((instrument) => (
-                        <Badge key={instrument} variant="secondary">
-                          {instrument}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>{formatRupiah(teacher.ratePerSession)}</TableCell>
-                  <TableCell>{teacher.phone ?? "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant={teacher.status === "ACTIVE" ? "default" : "outline"}>
-                      {teacher.status === "ACTIVE" ? "Aktif" : "Nonaktif"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm">
-                          <MoreHorizontal />
-                          <span className="sr-only">Aksi</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => openEditDialog(teacher)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setToggleTarget(teacher)}>
-                          {teacher.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Instrumen</TableHead>
+                  <TableHead className="text-right">Tarif/Sesi</TableHead>
+                  <TableHead>Telepon</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {teachers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      Belum ada guru.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  teachers.map((teacher) => (
+                    <TableRow key={teacher.id}>
+                      <TableCell className="font-medium">{teacher.name}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {teacher.instruments.map((instrument) => (
+                            <Badge key={instrument} variant="secondary">
+                              {instrument}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{formatRupiah(teacher.ratePerSession)}</TableCell>
+                      <TableCell>{teacher.phone ?? "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={teacher.status === "ACTIVE" ? "default" : "outline"}>
+                          {teacher.status === "ACTIVE" ? "Aktif" : "Nonaktif"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm">
+                              <MoreHorizontal />
+                              <span className="sr-only">Aksi</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => openEditDialog(teacher)}>
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setToggleTarget(teacher)}>
+                              {teacher.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <TeacherForm open={formOpen} onOpenChange={setFormOpen} teacher={editingTeacher} />
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { WalletCards } from "lucide-react";
 import { toast } from "sonner";
 
 import { generatePayroll } from "@/lib/actions/payroll";
@@ -8,6 +9,7 @@ import { MONTH_NAMES_ID, formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -71,7 +73,10 @@ export function GeneratePayrollDialog({ teachers }: GeneratePayrollDialogProps) 
 
   return (
     <>
-      <Button onClick={() => handleOpenChange(true)}>Generate Payroll</Button>
+      <Button onClick={() => handleOpenChange(true)}>
+        <WalletCards />
+        Generate Payroll
+      </Button>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -134,6 +139,11 @@ export function GeneratePayrollDialog({ teachers }: GeneratePayrollDialogProps) 
           </div>
 
           <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isPending}>
+                Batal
+              </Button>
+            </DialogClose>
             <Button onClick={handleGenerate} disabled={isPending}>
               {isPending ? "Memproses..." : "Generate"}
             </Button>

@@ -9,6 +9,7 @@ import { INSTRUMENTS, LEVELS } from "@/lib/validations/student";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -220,6 +221,11 @@ export function StudentForm({ open, onOpenChange, student }: StudentFormProps) {
           </div>
 
           <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isPending}>
+                Batal
+              </Button>
+            </DialogClose>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Menyimpan..." : "Simpan"}
             </Button>

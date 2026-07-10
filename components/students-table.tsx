@@ -6,8 +6,10 @@ import { MoreHorizontal, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { setStudentStatus } from "@/lib/actions/student";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,79 +74,83 @@ export function StudentsTable({ students }: StudentsTableProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Kelola Murid
-        </h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Kelola Murid"
+        description="Tambah, edit, dan kelola status murid."
+      >
         <Button onClick={openCreateDialog}>
           <Plus />
           Tambah Murid
         </Button>
-      </div>
+      </PageHeader>
 
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nama</TableHead>
-              <TableHead>Orang Tua</TableHead>
-              <TableHead>Kontak</TableHead>
-              <TableHead>Instrumen</TableHead>
-              <TableHead>Level</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  Belum ada murid.
-                </TableCell>
-              </TableRow>
-            ) : (
-              students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell className="font-medium">{student.name}</TableCell>
-                  <TableCell>{student.parentName ?? "-"}</TableCell>
-                  <TableCell>{student.contact ?? "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{student.instrument}</Badge>
-                  </TableCell>
-                  <TableCell>{student.level ?? "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant={student.status === "ACTIVE" ? "default" : "outline"}>
-                      {student.status === "ACTIVE" ? "Aktif" : "Nonaktif"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm">
-                          <MoreHorizontal />
-                          <span className="sr-only">Aksi</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/students/${student.id}/timeline`}>Riwayat</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => openEditDialog(student)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setToggleTarget(student)}>
-                          {student.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Orang Tua</TableHead>
+                  <TableHead>Kontak</TableHead>
+                  <TableHead>Instrumen</TableHead>
+                  <TableHead>Level</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {students.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      Belum ada murid.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  students.map((student) => (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{student.name}</TableCell>
+                      <TableCell>{student.parentName ?? "-"}</TableCell>
+                      <TableCell>{student.contact ?? "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{student.instrument}</Badge>
+                      </TableCell>
+                      <TableCell>{student.level ?? "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={student.status === "ACTIVE" ? "default" : "outline"}>
+                          {student.status === "ACTIVE" ? "Aktif" : "Nonaktif"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm">
+                              <MoreHorizontal />
+                              <span className="sr-only">Aksi</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/students/${student.id}/timeline`}>Riwayat</Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => openEditDialog(student)}>
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setToggleTarget(student)}>
+                              {student.status === "ACTIVE" ? "Nonaktifkan" : "Aktifkan"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <StudentForm open={formOpen} onOpenChange={setFormOpen} student={editingStudent} />
 

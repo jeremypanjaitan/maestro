@@ -7,6 +7,7 @@ import { rescheduleSession } from "@/lib/actions/session";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -111,6 +112,11 @@ export function RescheduleDialog({
           </div>
 
           <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isPending}>
+                Batal
+              </Button>
+            </DialogClose>
             <Button onClick={handleSubmit} disabled={isPending}>
               {isPending ? "Memproses..." : "Reschedule"}
             </Button>
