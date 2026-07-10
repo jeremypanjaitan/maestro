@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planSessions, type ScheduleInput, type PlannedSession } from './generateSessions';
+import { planSessions, type ScheduleInput } from './generateSessions';
 
 describe('planSessions', () => {
   it('should generate sessions for each matching day of week in date range', () => {
@@ -19,7 +19,9 @@ describe('planSessions', () => {
       instrument: 'piano',
       dayOfWeek: 1, // Monday
       startTime: '10:00',
-      durationMinutes: 60
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      rate: 900000
     };
 
     const result = planSessions([schedule], from, to, new Set());
@@ -32,7 +34,9 @@ describe('planSessions', () => {
       studentId: 'student-1',
       date: '2026-01-05',
       startTime: '10:00',
-      durationMinutes: 60
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      rate: 900000
     });
     expect(result[1]).toEqual({
       scheduleId: 'sched-1',
@@ -40,7 +44,9 @@ describe('planSessions', () => {
       studentId: 'student-1',
       date: '2026-01-12',
       startTime: '10:00',
-      durationMinutes: 60
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      rate: 900000
     });
     expect(result[2]).toEqual({
       scheduleId: 'sched-1',
@@ -48,7 +54,9 @@ describe('planSessions', () => {
       studentId: 'student-1',
       date: '2026-01-19',
       startTime: '10:00',
-      durationMinutes: 60
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      rate: 900000
     });
   });
 
@@ -63,7 +71,9 @@ describe('planSessions', () => {
       instrument: 'piano',
       dayOfWeek: 1, // Monday
       startTime: '10:00',
-      durationMinutes: 60
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      rate: 900000
     };
 
     // Skip the session on Jan 12
@@ -77,7 +87,7 @@ describe('planSessions', () => {
     expect(result[1].date).toBe('2026-01-19');
   });
 
-  it('should carry through startTime, durationMinutes, teacherId, and studentId', () => {
+  it('should carry through startTime, durationMinutes, teacherId, studentId, classType, and rate', () => {
     const from = new Date(2026, 0, 5);
     const to = new Date(2026, 0, 5);
 
@@ -88,7 +98,9 @@ describe('planSessions', () => {
       instrument: 'violin',
       dayOfWeek: 1, // Monday
       startTime: '14:30',
-      durationMinutes: 45
+      durationMinutes: 45,
+      classType: 'GROUP',
+      rate: 500000
     };
 
     const result = planSessions([schedule], from, to, new Set());
@@ -99,6 +111,8 @@ describe('planSessions', () => {
     expect(session.studentId).toBe('student-special');
     expect(session.startTime).toBe('14:30');
     expect(session.durationMinutes).toBe(45);
+    expect(session.classType).toBe('GROUP');
+    expect(session.rate).toBe(500000);
   });
 
   it('should handle multiple schedules', () => {
@@ -113,7 +127,9 @@ describe('planSessions', () => {
         instrument: 'piano',
         dayOfWeek: 1, // Monday
         startTime: '10:00',
-        durationMinutes: 60
+        durationMinutes: 60,
+        classType: 'PRIVATE',
+        rate: 900000
       },
       {
         id: 'sched-tue',
@@ -122,7 +138,9 @@ describe('planSessions', () => {
         instrument: 'guitar',
         dayOfWeek: 2, // Tuesday
         startTime: '15:00',
-        durationMinutes: 30
+        durationMinutes: 30,
+        classType: 'GROUP',
+        rate: 500000
       }
     ];
 
@@ -131,8 +149,12 @@ describe('planSessions', () => {
     expect(result).toHaveLength(2);
     expect(result[0].scheduleId).toBe('sched-mon');
     expect(result[0].date).toBe('2026-01-05');
+    expect(result[0].classType).toBe('PRIVATE');
+    expect(result[0].rate).toBe(900000);
     expect(result[1].scheduleId).toBe('sched-tue');
     expect(result[1].date).toBe('2026-01-06');
+    expect(result[1].classType).toBe('GROUP');
+    expect(result[1].rate).toBe(500000);
   });
 
   it('should return empty array when no schedules match', () => {
@@ -146,7 +168,9 @@ describe('planSessions', () => {
       instrument: 'piano',
       dayOfWeek: 3, // Wednesday
       startTime: '10:00',
-      durationMinutes: 60
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      rate: 900000
     };
 
     const result = planSessions([schedule], from, to, new Set());
@@ -165,7 +189,9 @@ describe('planSessions', () => {
       instrument: 'piano',
       dayOfWeek: 1,
       startTime: '10:00',
-      durationMinutes: 60
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      rate: 900000
     };
 
     const result = planSessions([schedule], from, to, new Set());

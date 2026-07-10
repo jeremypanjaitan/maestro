@@ -46,7 +46,7 @@ async function conflictsWithActiveSchedules(
       active: true,
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
-    select: { teacherId: true, studentId: true, startTime: true, durationMinutes: true },
+    select: { teacherId: true, studentId: true, startTime: true, durationMinutes: true, classType: true },
   });
 
   return hasConflict(candidate, existing);
@@ -68,17 +68,17 @@ export async function createSchedule(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes } =
+  const { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate } =
     parsed.data;
 
-  const candidate: Slot = { teacherId, studentId, startTime, durationMinutes };
+  const candidate: Slot = { teacherId, studentId, startTime, durationMinutes, classType };
   if (await conflictsWithActiveSchedules(candidate, dayOfWeek)) {
     return { ok: false, error: CONFLICT_MESSAGE };
   }
 
   try {
     await prisma.schedule.create({
-      data: { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes },
+      data: { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate },
     });
   } catch (error) {
     if (isNotFoundError(error)) {
@@ -107,10 +107,10 @@ export async function updateSchedule(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes } =
+  const { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate } =
     parsed.data;
 
-  const candidate: Slot = { teacherId, studentId, startTime, durationMinutes };
+  const candidate: Slot = { teacherId, studentId, startTime, durationMinutes, classType };
   if (await conflictsWithActiveSchedules(candidate, dayOfWeek, id)) {
     return { ok: false, error: CONFLICT_MESSAGE };
   }
@@ -118,7 +118,7 @@ export async function updateSchedule(
   try {
     await prisma.schedule.update({
       where: { id },
-      data: { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes },
+      data: { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate },
     });
   } catch (error) {
     if (isNotFoundError(error)) {
@@ -157,6 +157,7 @@ export async function toggleSchedule(id: string): Promise<ScheduleActionResult> 
       studentId: schedule.studentId,
       startTime: schedule.startTime,
       durationMinutes: schedule.durationMinutes,
+      classType: schedule.classType,
     };
     if (await conflictsWithActiveSchedules(candidate, schedule.dayOfWeek, id)) {
       return { ok: false, error: CONFLICT_MESSAGE };

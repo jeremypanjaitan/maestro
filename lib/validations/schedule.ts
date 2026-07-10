@@ -34,6 +34,13 @@ const durationMinutes = z.coerce
   .positive("Durasi harus lebih dari 0")
   .default(60);
 
+const classType = z.enum(["PRIVATE", "GROUP"], { error: "Tipe kelas wajib diisi" });
+
+const rate = z.coerce
+  .number({ error: "Tarif wajib diisi" })
+  .int("Tarif harus bilangan bulat")
+  .positive("Tarif harus lebih dari 0");
+
 /** Schema for creating or updating a weekly schedule slot. */
 export const scheduleSchema = z.object({
   teacherId,
@@ -42,6 +49,8 @@ export const scheduleSchema = z.object({
   dayOfWeek,
   startTime,
   durationMinutes,
+  classType,
+  rate,
 });
 
 export const createScheduleSchema = scheduleSchema;

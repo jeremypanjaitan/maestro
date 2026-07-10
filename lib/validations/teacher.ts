@@ -21,6 +21,14 @@ const ratePerSession = z.coerce
   .int("Tarif harus bilangan bulat")
   .positive("Tarif harus lebih dari 0");
 
+/** Default GROUP-class rate used only to prefill the schedule form — not
+ * authoritative; the actual per-enrollment rate lives on `Schedule.rate`. */
+const defaultGroupRate = z.coerce
+  .number()
+  .int("Tarif grup harus bilangan bulat")
+  .positive("Tarif grup harus lebih dari 0")
+  .optional();
+
 const phone = z
   .string()
   .trim()
@@ -37,6 +45,7 @@ export const createTeacherSchema = z.object({
   email,
   instruments,
   ratePerSession,
+  defaultGroupRate,
   phone,
   status,
 });
@@ -46,6 +55,7 @@ export const updateTeacherSchema = z.object({
   name,
   instruments,
   ratePerSession,
+  defaultGroupRate,
   phone,
   status,
 });
