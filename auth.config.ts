@@ -50,5 +50,20 @@ export const authConfig = {
 
       return true;
     },
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
+        token.teacherId = user.teacherId;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub as string;
+        session.user.role = token.role;
+        session.user.teacherId = token.teacherId;
+      }
+      return session;
+    },
   },
 } satisfies NextAuthConfig;
