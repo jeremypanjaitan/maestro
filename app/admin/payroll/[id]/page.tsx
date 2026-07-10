@@ -5,6 +5,7 @@ import { formatDbDate } from "@/lib/domain/dbDate";
 import { PAYROLL_STATUS_LABELS } from "@/lib/domain/constants";
 import { formatPeriod, formatRupiah } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -58,18 +59,29 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
           </div>
         </div>
 
-        {/* Export buttons (PDF/CSV) are added in Task 20. */}
-        <PayrollStatusActions
-          payroll={{
-            id: payroll.id,
-            teacherName: payroll.teacher.name,
-            periodMonth: payroll.periodMonth,
-            periodYear: payroll.periodYear,
-            status: payroll.status,
-            total: payroll.total,
-            itemCount: payroll.items.length,
-          }}
-        />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a href={`/api/export/payroll/${payroll.id}?format=pdf`} target="_blank" rel="noopener noreferrer">
+              Export PDF
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/api/export/payroll/${payroll.id}?format=excel`} download>
+              Export Excel
+            </a>
+          </Button>
+          <PayrollStatusActions
+            payroll={{
+              id: payroll.id,
+              teacherName: payroll.teacher.name,
+              periodMonth: payroll.periodMonth,
+              periodYear: payroll.periodYear,
+              status: payroll.status,
+              total: payroll.total,
+              itemCount: payroll.items.length,
+            }}
+          />
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
