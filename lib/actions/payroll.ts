@@ -5,12 +5,35 @@ import type { PayrollStatus } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { computePayroll } from "@/lib/domain/payroll";
+import { formatDbDate } from "@/lib/domain/dbDate";
+import { assignMeetingNumbers } from "@/lib/domain/meeting";
 
 export type PayrollActionResult = { ok: true } | { ok: false; error: string };
 
 export type GeneratePayrollResult =
   | { ok: true; payrollId: string; total: number; itemCount: number }
+  | { ok: false; error: string };
+
+/** Derived per-session payment status — never persisted, always computed
+ * from whether/how a HADIR session is referenced by a PayrollItem. */
+export type PayStatus = "UNPAID" | "PROCESSING" | "PAID";
+
+export type PayableSession = {
+  id: string;
+  dateStr: string;
+  startTime: string;
+  studentName: string;
+  rate: number;
+  meetingNumber: number | null;
+  payStatus: PayStatus;
+  /** True if this session's PayrollItem belongs to the payroll for exactly
+   * this (teacherId, month, year) period — used to pre-check the row in the
+   * selection UI when regenerating an existing DRAFT/APPROVED payroll. */
+  inThisPayroll: boolean;
+};
+
+export type GetPayableSessionsResult =
+  | { ok: true; sessions: PayableSession[] }
   | { ok: false; error: string };
 
 /** Defense-in-depth: re-checks the ADMIN role inside the action itself,
@@ -38,28 +61,162 @@ const ALLOWED_TRANSITIONS: Record<PayrollStatus, PayrollStatus[]> = {
   PAID: [],
 };
 
+/** Shared month/year validation used by both `getPayableSessions` and
+ * `generatePayroll`. Returns an error string, or null if valid. */
+function validatePeriod(month: number, year: number): string | null {
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    return "Bulan tidak valid";
+  }
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    return "Tahun tidak valid";
+  }
+  return null;
+}
+
 /**
- * (Re)generates a teacher's payroll for a given month/year: sums the
+ * Lists a teacher's HADIR sessions within a month, each annotated with its
+ * derived pay status (UNPAID / PROCESSING / PAID, based on whether/how a
+ * PayrollItem references it — see `PayStatus`) and its "pertemuan ke-N"
+ * meeting number. Used to render the meeting-selection checklist in the
+ * generate-payroll dialog.
+ */
+export async function getPayableSessions(
+  teacherId: string,
+  month: number,
+  year: number,
+): Promise<GetPayableSessionsResult> {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
+  const periodError = validatePeriod(month, year);
+  if (periodError) {
+    return { ok: false, error: periodError };
+  }
+
+  const teacher = await prisma.teacher.findUnique({
+    where: { id: teacherId },
+    select: { id: true },
+  });
+  if (!teacher) {
+    return { ok: false, error: "Guru tidak ditemukan" };
+  }
+
+  // Month boundaries in UTC, matching how `date @db.Date` columns are stored
+  // (see `lib/domain/dbDate.ts`).
+  const periodStart = new Date(Date.UTC(year, month - 1, 1));
+  const periodEnd = new Date(Date.UTC(year, month, 0));
+
+  // Meeting numbers ("pertemuan ke-N") must be computed against the
+  // teacher's FULL session history, not just this period's sessions —
+  // mirrors `getMeetingNumbersForTeacher` in `lib/queries/payroll.ts`.
+  const allSessions = await prisma.session.findMany({
+    where: { teacherId },
+    select: {
+      id: true,
+      studentId: true,
+      teacherId: true,
+      date: true,
+      startTime: true,
+      status: true,
+    },
+  });
+  const meetingNumbers = assignMeetingNumbers(
+    allSessions.map((s) => ({
+      sessionId: s.id,
+      studentId: s.studentId,
+      teacherId: s.teacherId,
+      date: formatDbDate(s.date),
+      startTime: s.startTime,
+      status: s.status,
+    })),
+  );
+
+  const periodSessions = await prisma.session.findMany({
+    where: {
+      teacherId,
+      status: "HADIR",
+      date: { gte: periodStart, lte: periodEnd },
+    },
+    select: {
+      id: true,
+      date: true,
+      startTime: true,
+      rate: true,
+      student: { select: { name: true } },
+      payrollItem: {
+        select: {
+          payroll: {
+            select: { teacherId: true, periodMonth: true, periodYear: true, status: true },
+          },
+        },
+      },
+    },
+    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+  });
+
+  const sessions: PayableSession[] = periodSessions.map((s) => {
+    let payStatus: PayStatus = "UNPAID";
+    let inThisPayroll = false;
+
+    if (s.payrollItem) {
+      const owner = s.payrollItem.payroll;
+      payStatus = owner.status === "PAID" ? "PAID" : "PROCESSING";
+      inThisPayroll =
+        owner.teacherId === teacherId &&
+        owner.periodMonth === month &&
+        owner.periodYear === year;
+    }
+
+    return {
+      id: s.id,
+      dateStr: formatDbDate(s.date),
+      startTime: s.startTime,
+      studentName: s.student.name,
+      rate: s.rate,
+      meetingNumber: meetingNumbers.get(s.id) ?? null,
+      payStatus,
+      inThisPayroll,
+    };
+  });
+
+  return { ok: true, sessions };
+}
+
+/**
+ * (Re)generates a teacher's payroll for a given month/year from an
+ * admin-selected subset of their HADIR sessions in that period: sums the
  * per-session `rate` snapshot (classType + rate captured at session-creation
- * time, NOT a single teacher-wide rate) over their HADIR sessions in that
- * period, and upserts a Payroll + its PayrollItems. Idempotent — calling it
- * again for the same period replaces
- * the items rather than duplicating them, and resets the status to DRAFT
- * (unless the existing payroll is already PAID, in which case it refuses).
+ * time, NOT a single teacher-wide rate) over `sessionIds`, and upserts a
+ * Payroll + its PayrollItems. Idempotent — calling it again for the same
+ * period replaces the items rather than duplicating them, and resets the
+ * status to DRAFT (unless the existing payroll is already PAID, in which
+ * case it refuses).
+ *
+ * `sessionIds` is validated against two constraints, both enforced by
+ * filtering (an ineligible id is silently dropped rather than failing the
+ * whole call, so a stale client-side selection can't block a legitimate
+ * generate):
+ *  - must be one of the teacher's HADIR sessions within the period;
+ *  - must be unclaimed by any payroll, or already claimed by THIS period's
+ *    payroll — a session can never be stolen from a different payroll,
+ *    since `PayrollItem.sessionId` is globally unique.
  */
 export async function generatePayroll(
   teacherId: string,
   month: number,
   year: number,
+  sessionIds: string[],
 ): Promise<GeneratePayrollResult> {
   const guard = await requireAdmin();
   if (guard) return guard;
 
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
-    return { ok: false, error: "Bulan tidak valid" };
+  const periodError = validatePeriod(month, year);
+  if (periodError) {
+    return { ok: false, error: periodError };
   }
-  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
-    return { ok: false, error: "Tahun tidak valid" };
+
+  if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+    return { ok: false, error: "Pilih minimal satu pertemuan" };
   }
 
   const teacher = await prisma.teacher.findUnique({
@@ -92,20 +249,31 @@ export async function generatePayroll(
   const periodStart = new Date(Date.UTC(year, month - 1, 1));
   const periodEnd = new Date(Date.UTC(year, month, 0));
 
-  const sessions = await prisma.session.findMany({
-    where: {
-      teacherId,
-      status: "HADIR",
-      date: { gte: periodStart, lte: periodEnd },
-    },
-    select: { id: true, status: true, rate: true },
-  });
+  /** Prisma's transaction-scoped client type, used so `fetchEligible` can
+   * run against either the plain client or the tx. */
+  type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-  const { items, total } = computePayroll(
-    sessions.map((s) => ({ sessionId: s.id, status: s.status, rate: s.rate })),
-  );
+  /** Re-fetches the candidate sessions and filters them down to the ones
+   * eligible to be claimed by `ownerPayrollId` (the current payroll for this
+   * period, if any): must be this teacher's HADIR sessions within the
+   * period, and unclaimed or already claimed by `ownerPayrollId`. */
+  async function fetchEligible(client: typeof prisma | PrismaTx, ownerPayrollId: string | undefined) {
+    const candidates = await client.session.findMany({
+      where: {
+        id: { in: sessionIds },
+        teacherId,
+        status: "HADIR",
+        date: { gte: periodStart, lte: periodEnd },
+      },
+      select: { id: true, rate: true, payrollItem: { select: { payrollId: true } } },
+    });
+    return candidates.filter(
+      (s) => !s.payrollItem || s.payrollItem.payrollId === ownerPayrollId,
+    );
+  }
 
   let payroll;
+  let finalItemCount = 0;
   try {
     payroll = await prisma.$transaction(async (tx) => {
       // Authoritative re-check: re-fetch inside the transaction so the
@@ -128,10 +296,19 @@ export async function generatePayroll(
         );
       }
 
-      if (existing) {
+      // Authoritative eligibility check, run inside the transaction against
+      // whatever the current payroll for this period actually is: a
+      // session is eligible only if it's unclaimed or already claimed by
+      // `current` (this period's own payroll) — it can never be stolen
+      // from a different payroll (see `PayrollItem.sessionId`'s global
+      // unique constraint).
+      const eligible = await fetchEligible(tx, current?.id);
+      const total = eligible.reduce((sum, s) => sum + s.rate, 0);
+
+      if (current) {
         // Delete before recreating so the globally-unique
         // `PayrollItem.sessionId` never collides with itself.
-        await tx.payrollItem.deleteMany({ where: { payrollId: existing.id } });
+        await tx.payrollItem.deleteMany({ where: { payrollId: current.id } });
       }
 
       const record = await tx.payroll.upsert({
@@ -146,16 +323,17 @@ export async function generatePayroll(
         update: { status: "DRAFT", total },
       });
 
-      if (items.length > 0) {
+      if (eligible.length > 0) {
         await tx.payrollItem.createMany({
-          data: items.map((item) => ({
+          data: eligible.map((s) => ({
             payrollId: record.id,
-            sessionId: item.sessionId,
-            rate: item.rate,
+            sessionId: s.id,
+            rate: s.rate,
           })),
         });
       }
 
+      finalItemCount = eligible.length;
       return record;
     });
   } catch (error) {
@@ -167,7 +345,7 @@ export async function generatePayroll(
 
   revalidatePath("/admin/payroll");
   revalidatePath(`/admin/payroll/${payroll.id}`);
-  return { ok: true, payrollId: payroll.id, total: payroll.total, itemCount: items.length };
+  return { ok: true, payrollId: payroll.id, total: payroll.total, itemCount: finalItemCount };
 }
 
 /**
