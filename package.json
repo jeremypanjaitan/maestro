@@ -11,6 +11,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:admin": "tsx prisma/seed-admin.ts",
     "db:clear": "tsx prisma/clear.ts",
+    "add:admin": "tsx prisma/add-user.ts ADMIN",
+    "add:guru": "tsx prisma/add-user.ts GURU",
     "test": "vitest run"
   },
   "prisma": {
