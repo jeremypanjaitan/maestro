@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { ClassType, SessionStatus } from "@prisma/client";
-import { MoreHorizontal } from "lucide-react";
+import { FileText, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 import { cancelSession, updateSessionStatus } from "@/lib/actions/session";
@@ -235,6 +236,13 @@ export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/sessions/${session.id}/report`}>
+                                <FileText />
+                                Lihat Laporan
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             {ASSIGNABLE_STATUSES.map((status) => (
                               <DropdownMenuItem
                                 key={status}
