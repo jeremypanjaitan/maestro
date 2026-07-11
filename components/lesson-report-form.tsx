@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { upsertLessonReport } from "@/lib/actions/lessonReport";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 export type LessonReportRecord = {
   material: string | null;
@@ -79,20 +79,20 @@ export function LessonReportForm({ sessionId, report }: LessonReportFormProps) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid gap-2">
         <Label htmlFor="material">Materi</Label>
-        <Textarea
-          id="material"
+        <RichTextEditor
+          ariaLabel="Materi"
           value={form.material}
-          onChange={(e) => setForm((prev) => ({ ...prev, material: e.target.value }))}
+          onChange={(html) => setForm((prev) => ({ ...prev, material: html }))}
           placeholder="Materi yang diajarkan pada sesi ini"
         />
       </div>
 
       <div className="grid gap-2">
         <Label htmlFor="notes">Catatan</Label>
-        <Textarea
-          id="notes"
+        <RichTextEditor
+          ariaLabel="Catatan"
           value={form.notes}
-          onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+          onChange={(html) => setForm((prev) => ({ ...prev, notes: html }))}
           placeholder="Catatan tambahan (opsional)"
         />
       </div>

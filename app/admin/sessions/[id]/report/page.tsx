@@ -5,6 +5,7 @@ import { buildDataUrl } from "@/lib/files";
 import { formatDbDate } from "@/lib/domain/dbDate";
 import { PageHeader } from "@/components/page-header";
 import { SessionStatusBadge } from "@/components/status-badge";
+import { RichText } from "@/components/rich-text";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AdminSessionReportPageProps = {
@@ -23,6 +24,25 @@ function ReadOnlyField({ label, value }: { label: string; value: string | null |
       <span className="text-sm font-medium">{label}</span>
       {value ? (
         <p className="whitespace-pre-wrap text-sm text-muted-foreground">{value}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">—</p>
+      )}
+    </div>
+  );
+}
+
+/** Same as `ReadOnlyField`, but for Materi/Catatan: the value is stored as
+ * (sanitized-on-render) HTML from the WYSIWYG editor rather than plain
+ * text, so it's rendered via `<RichText>` instead of a raw `<p>`. Empty is
+ * defined as "no visible text after stripping tags" -- e.g. an editor that
+ * was opened and left with just an empty `<p></p>` should still show "—". */
+function RichReadOnlyField({ label, value }: { label: string; value: string | null | undefined }) {
+  const hasContent = Boolean(value && value.replace(/<[^>]*>/g, "").trim().length > 0);
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-sm font-medium">{label}</span>
+      {hasContent ? (
+        <RichText html={value!} className="text-muted-foreground" />
       ) : (
         <p className="text-sm text-muted-foreground">—</p>
       )}
@@ -85,8 +105,8 @@ export default async function AdminSessionReportPage({ params }: AdminSessionRep
         <CardContent>
           {report ? (
             <div className="flex flex-col gap-4">
-              <ReadOnlyField label="Materi" value={report.material} />
-              <ReadOnlyField label="Catatan" value={report.notes} />
+              <RichReadOnlyField label="Materi" value={report.material} />
+              <RichReadOnlyField label="Catatan" value={report.notes} />
               {legacyFields.map((field) => (
                 <ReadOnlyField key={field.label} label={field.label} value={field.value} />
               ))}

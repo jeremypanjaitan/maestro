@@ -4,6 +4,7 @@ import { buildDataUrl } from "@/lib/files";
 import type { TimelineEntry } from "@/lib/queries/history";
 import { Card } from "@/components/ui/card";
 import { SessionStatusBadge } from "@/components/status-badge";
+import { RichText } from "@/components/rich-text";
 
 type StudentTimelineProps = {
   entries: TimelineEntry[];
@@ -50,7 +51,9 @@ export function StudentTimeline({ entries }: StudentTimelineProps) {
                 {entry.material ? (
                   <div>
                     <dt className="text-xs text-muted-foreground">Materi</dt>
-                    <dd className="text-foreground">{entry.material}</dd>
+                    <dd className="text-foreground">
+                      <RichText html={entry.material} />
+                    </dd>
                   </div>
                 ) : null}
                 {entry.target ? (
@@ -80,7 +83,9 @@ export function StudentTimeline({ entries }: StudentTimelineProps) {
                 {entry.notes ? (
                   <div className="sm:col-span-2">
                     <dt className="text-xs text-muted-foreground">Catatan</dt>
-                    <dd className="text-foreground">{entry.notes}</dd>
+                    <dd className="text-foreground">
+                      <RichText html={entry.notes} />
+                    </dd>
                   </div>
                 ) : null}
               </dl>
