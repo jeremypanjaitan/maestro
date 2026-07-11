@@ -73,6 +73,7 @@ export default async function SessionReportPage({ params }: SessionReportPagePro
         </CardHeader>
         <CardContent>
           <AttachmentUploader
+            sessionId={sessionRecord.id}
             reportId={report?.id ?? null}
             attachments={report?.attachments ?? []}
           />

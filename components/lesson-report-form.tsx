@@ -27,9 +27,6 @@ type LessonReportFormProps = {
 
 const EMPTY_FORM = {
   material: "",
-  target: "",
-  result: "",
-  homework: "",
   grade: "",
   notes: "",
 };
@@ -38,9 +35,6 @@ function toFormState(report?: LessonReportRecord | null) {
   if (!report) return EMPTY_FORM;
   return {
     material: report.material ?? "",
-    target: report.target ?? "",
-    result: report.result ?? "",
-    homework: report.homework ?? "",
     grade: report.grade ?? "",
     notes: report.notes ?? "",
   };
@@ -93,36 +87,6 @@ export function LessonReportForm({ sessionId, report }: LessonReportFormProps) {
           value={form.material}
           onChange={(e) => setForm((prev) => ({ ...prev, material: e.target.value }))}
           placeholder="Materi yang diajarkan pada sesi ini"
-        />
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="target">Target</Label>
-        <Textarea
-          id="target"
-          value={form.target}
-          onChange={(e) => setForm((prev) => ({ ...prev, target: e.target.value }))}
-          placeholder="Target yang ingin dicapai"
-        />
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="result">Hasil</Label>
-        <Textarea
-          id="result"
-          value={form.result}
-          onChange={(e) => setForm((prev) => ({ ...prev, result: e.target.value }))}
-          placeholder="Hasil / perkembangan murid"
-        />
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="homework">PR</Label>
-        <Textarea
-          id="homework"
-          value={form.homework}
-          onChange={(e) => setForm((prev) => ({ ...prev, homework: e.target.value }))}
-          placeholder="Tugas untuk dikerjakan di rumah"
         />
       </div>
 

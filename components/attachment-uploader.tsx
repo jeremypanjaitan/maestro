@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { AttachmentType } from "@prisma/client";
 
-import { addAttachment, deleteAttachment } from "@/lib/actions/lessonReport";
+import {
+  addAttachment,
+  deleteAttachment,
+  upsertLessonReport,
+} from "@/lib/actions/lessonReport";
 import { buildDataUrl, fileToBase64, validateFile } from "@/lib/files";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +32,12 @@ export type AttachmentRecord = {
 };
 
 type AttachmentUploaderProps = {
-  /** `null` until the lesson report has been saved at least once -- an
-   * Attachment always belongs to a LessonReport, so uploads are disabled
-   * until that row exists. */
+  /** The session this report belongs to -- used to auto-create the
+   * LessonReport row on first upload so the user doesn't have to press
+   * "Simpan Laporan" first. */
+  sessionId: string;
+  /** `null` until the lesson report has been saved at least once. When
+   * null, the first file upload will create the report automatically. */
   reportId: string | null;
   attachments: AttachmentRecord[];
 };
@@ -50,7 +57,11 @@ const TYPE_LABELS: Record<AttachmentType, string> = {
  * via `buildDataUrl`, matching exactly how they were uploaded: PHOTO as
  * `<img>`, VIDEO as `<video controls>`, AUDIO as `<audio controls>`.
  */
-export function AttachmentUploader({ reportId, attachments }: AttachmentUploaderProps) {
+export function AttachmentUploader({
+  sessionId,
+  reportId,
+  attachments,
+}: AttachmentUploaderProps) {
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -60,11 +71,6 @@ export function AttachmentUploader({ reportId, attachments }: AttachmentUploader
     event.target.value = ""; // allow re-selecting the same file again later
     if (!file) return;
 
-    if (!reportId) {
-      toast.error("Simpan laporan terlebih dahulu sebelum menambah lampiran");
-      return;
-    }
-
     const validation = validateFile(file);
     if (!validation.ok) {
       toast.error(validation.error);
@@ -73,8 +79,20 @@ export function AttachmentUploader({ reportId, attachments }: AttachmentUploader
 
     setIsUploading(true);
     try {
+      // Ensure a LessonReport exists: create an empty one on the fly if the
+      // user hasn't pressed "Simpan Laporan" yet.
+      let targetReportId = reportId;
+      if (!targetReportId) {
+        const created = await upsertLessonReport(sessionId, {});
+        if (!created.ok) {
+          toast.error(created.error);
+          return;
+        }
+        targetReportId = created.reportId;
+      }
+
       const dataBase64 = await fileToBase64(file);
-      const result = await addAttachment(reportId, {
+      const result = await addAttachment(targetReportId, {
         type: validation.type,
         filename: file.name,
         mimeType: file.type,
@@ -112,16 +130,11 @@ export function AttachmentUploader({ reportId, attachments }: AttachmentUploader
           type="file"
           accept="image/*,video/*,audio/*"
           onChange={handleFileChange}
-          disabled={isUploading || !reportId}
+          disabled={isUploading}
           className="text-sm"
         />
         {isUploading && <span className="text-sm text-muted-foreground">Mengunggah...</span>}
       </div>
-      {!reportId && (
-        <p className="text-sm text-muted-foreground">
-          Simpan laporan terlebih dahulu untuk dapat menambahkan lampiran.
-        </p>
-      )}
 
       {attachments.length === 0 ? (
         <p className="text-sm text-muted-foreground">Belum ada lampiran.</p>
