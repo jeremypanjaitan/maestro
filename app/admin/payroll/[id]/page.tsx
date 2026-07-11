@@ -38,6 +38,8 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
               date: true,
               startTime: true,
               classType: true,
+              packagePrice: true,
+              packageSessions: true,
               student: { select: { name: true, instrument: true } },
               schedule: { select: { instrument: true } },
             },
@@ -117,13 +119,14 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
                   <TableHead>Instrumen</TableHead>
                   <TableHead>Tipe</TableHead>
                   <TableHead>Pertemuan ke-N</TableHead>
+                  <TableHead className="text-right">Paket</TableHead>
                   <TableHead className="text-right">Tarif</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {payroll.items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       Tidak ada sesi HADIR pada periode ini.
                     </TableCell>
                   </TableRow>
@@ -146,6 +149,9 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
                         <TableCell>
                           {meetingNumber != null ? `Ke-${meetingNumber}` : "-"}
                         </TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">
+                          {formatRupiah(item.session.packagePrice)} / {item.session.packageSessions}
+                        </TableCell>
                         <TableCell className="text-right">{formatRupiah(item.rate)}</TableCell>
                       </TableRow>
                     );
@@ -155,7 +161,7 @@ export default async function PayrollDetailPage({ params }: PayrollDetailPagePro
               {payroll.items.length > 0 ? (
                 <tfoot>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-right font-medium">
+                    <TableCell colSpan={7} className="text-right font-medium">
                       Total
                     </TableCell>
                     <TableCell className="text-right font-medium">

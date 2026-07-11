@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { toggleSchedule } from "@/lib/actions/schedule";
 import { DAY_LABELS } from "@/lib/validations/schedule";
+import { perSessionRate } from "@/lib/domain/rate";
 import { formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +110,7 @@ export function SchedulesTable({ schedules, teachers, students }: SchedulesTable
                   <TableHead>Jam</TableHead>
                   <TableHead>Durasi</TableHead>
                   <TableHead>Tipe</TableHead>
-                  <TableHead className="text-right">Tarif</TableHead>
+                  <TableHead className="text-right">Paket</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -133,7 +134,19 @@ export function SchedulesTable({ schedules, teachers, students }: SchedulesTable
                       <TableCell>
                         <ClassTypeBadge classType={schedule.classType} />
                       </TableCell>
-                      <TableCell className="text-right">{formatRupiah(schedule.rate)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col text-sm">
+                          <span>
+                            {formatRupiah(schedule.packagePrice)} / {schedule.packageSessions} sesi
+                          </span>
+                          <span className="text-muted-foreground">
+                            {formatRupiah(
+                              perSessionRate(schedule.packagePrice, schedule.packageSessions),
+                            )}
+                            /sesi
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={schedule.active ? "default" : "outline"}>
                           {schedule.active ? "Aktif" : "Nonaktif"}

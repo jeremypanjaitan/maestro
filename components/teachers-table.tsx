@@ -5,7 +5,6 @@ import { MoreHorizontal, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { setTeacherStatus } from "@/lib/actions/teacher";
-import { formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,7 +92,6 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                 <TableRow>
                   <TableHead>Nama</TableHead>
                   <TableHead>Instrumen</TableHead>
-                  <TableHead className="text-right">Tarif/Sesi</TableHead>
                   <TableHead>Telepon</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
@@ -102,7 +100,7 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
               <TableBody>
                 {teachers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       Belum ada guru.
                     </TableCell>
                   </TableRow>
@@ -117,17 +115,6 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                               {instrument}
                             </Badge>
                           ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-col text-sm">
-                          <span>Privat: {formatRupiah(teacher.ratePerSession)}</span>
-                          <span className="text-muted-foreground">
-                            Grup:{" "}
-                            {teacher.defaultGroupRate != null
-                              ? formatRupiah(teacher.defaultGroupRate)
-                              : "-"}
-                          </span>
                         </div>
                       </TableCell>
                       <TableCell>{teacher.phone ?? "-"}</TableCell>

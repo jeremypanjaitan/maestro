@@ -68,8 +68,17 @@ export async function createSchedule(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate } =
-    parsed.data;
+  const {
+    teacherId,
+    studentId,
+    instrument,
+    dayOfWeek,
+    startTime,
+    durationMinutes,
+    classType,
+    packagePrice,
+    packageSessions,
+  } = parsed.data;
 
   const candidate: Slot = { teacherId, studentId, startTime, durationMinutes, classType };
   if (await conflictsWithActiveSchedules(candidate, dayOfWeek)) {
@@ -78,7 +87,17 @@ export async function createSchedule(
 
   try {
     await prisma.schedule.create({
-      data: { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate },
+      data: {
+        teacherId,
+        studentId,
+        instrument,
+        dayOfWeek,
+        startTime,
+        durationMinutes,
+        classType,
+        packagePrice,
+        packageSessions,
+      },
     });
   } catch (error) {
     if (isNotFoundError(error)) {
@@ -107,8 +126,17 @@ export async function updateSchedule(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate } =
-    parsed.data;
+  const {
+    teacherId,
+    studentId,
+    instrument,
+    dayOfWeek,
+    startTime,
+    durationMinutes,
+    classType,
+    packagePrice,
+    packageSessions,
+  } = parsed.data;
 
   const candidate: Slot = { teacherId, studentId, startTime, durationMinutes, classType };
   if (await conflictsWithActiveSchedules(candidate, dayOfWeek, id)) {
@@ -118,7 +146,17 @@ export async function updateSchedule(
   try {
     await prisma.schedule.update({
       where: { id },
-      data: { teacherId, studentId, instrument, dayOfWeek, startTime, durationMinutes, classType, rate },
+      data: {
+        teacherId,
+        studentId,
+        instrument,
+        dayOfWeek,
+        startTime,
+        durationMinutes,
+        classType,
+        packagePrice,
+        packageSessions,
+      },
     });
   } catch (error) {
     if (isNotFoundError(error)) {

@@ -144,7 +144,8 @@ export async function generateSessions(
     startTime: s.startTime,
     durationMinutes: s.durationMinutes,
     classType: s.classType,
-    rate: s.rate,
+    packagePrice: s.packagePrice,
+    packageSessions: s.packageSessions,
   }));
 
   const existingSessions = await prisma.session.findMany({
@@ -172,6 +173,8 @@ export async function generateSessions(
         durationMinutes: p.durationMinutes,
         classType: p.classType,
         rate: p.rate,
+        packagePrice: p.packagePrice,
+        packageSessions: p.packageSessions,
         status: "SCHEDULED",
       })),
     });
@@ -305,6 +308,8 @@ export async function rescheduleSession(
         durationMinutes: original.durationMinutes,
         classType: original.classType,
         rate: original.rate,
+        packagePrice: original.packagePrice,
+        packageSessions: original.packageSessions,
         status: "SCHEDULED",
       },
     });

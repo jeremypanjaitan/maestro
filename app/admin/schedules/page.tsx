@@ -13,7 +13,7 @@ export default async function AdminSchedulesPage() {
     prisma.teacher.findMany({
       where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, ratePerSession: true, defaultGroupRate: true },
+      select: { id: true, name: true },
     }),
     prisma.student.findMany({
       where: { status: "ACTIVE" },

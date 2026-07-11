@@ -21,7 +21,8 @@ describe('planSessions', () => {
       startTime: '10:00',
       durationMinutes: 60,
       classType: 'PRIVATE',
-      rate: 900000
+      packagePrice: 900000,
+      packageSessions: 4
     };
 
     const result = planSessions([schedule], from, to, new Set());
@@ -36,7 +37,9 @@ describe('planSessions', () => {
       startTime: '10:00',
       durationMinutes: 60,
       classType: 'PRIVATE',
-      rate: 900000
+      packagePrice: 900000,
+      packageSessions: 4,
+      rate: 225000
     });
     expect(result[1]).toEqual({
       scheduleId: 'sched-1',
@@ -46,7 +49,9 @@ describe('planSessions', () => {
       startTime: '10:00',
       durationMinutes: 60,
       classType: 'PRIVATE',
-      rate: 900000
+      packagePrice: 900000,
+      packageSessions: 4,
+      rate: 225000
     });
     expect(result[2]).toEqual({
       scheduleId: 'sched-1',
@@ -56,7 +61,9 @@ describe('planSessions', () => {
       startTime: '10:00',
       durationMinutes: 60,
       classType: 'PRIVATE',
-      rate: 900000
+      packagePrice: 900000,
+      packageSessions: 4,
+      rate: 225000
     });
   });
 
@@ -73,7 +80,8 @@ describe('planSessions', () => {
       startTime: '10:00',
       durationMinutes: 60,
       classType: 'PRIVATE',
-      rate: 900000
+      packagePrice: 900000,
+      packageSessions: 4
     };
 
     // Skip the session on Jan 12
@@ -87,7 +95,7 @@ describe('planSessions', () => {
     expect(result[1].date).toBe('2026-01-19');
   });
 
-  it('should carry through startTime, durationMinutes, teacherId, studentId, classType, and rate', () => {
+  it('should carry through startTime, durationMinutes, teacherId, studentId, classType, and compute rate from the package', () => {
     const from = new Date(2026, 0, 5);
     const to = new Date(2026, 0, 5);
 
@@ -100,7 +108,8 @@ describe('planSessions', () => {
       startTime: '14:30',
       durationMinutes: 45,
       classType: 'GROUP',
-      rate: 500000
+      packagePrice: 500000,
+      packageSessions: 1
     };
 
     const result = planSessions([schedule], from, to, new Set());
@@ -112,6 +121,8 @@ describe('planSessions', () => {
     expect(session.startTime).toBe('14:30');
     expect(session.durationMinutes).toBe(45);
     expect(session.classType).toBe('GROUP');
+    expect(session.packagePrice).toBe(500000);
+    expect(session.packageSessions).toBe(1);
     expect(session.rate).toBe(500000);
   });
 
@@ -129,7 +140,8 @@ describe('planSessions', () => {
         startTime: '10:00',
         durationMinutes: 60,
         classType: 'PRIVATE',
-        rate: 900000
+        packagePrice: 900000,
+        packageSessions: 4
       },
       {
         id: 'sched-tue',
@@ -140,7 +152,8 @@ describe('planSessions', () => {
         startTime: '15:00',
         durationMinutes: 30,
         classType: 'GROUP',
-        rate: 500000
+        packagePrice: 500000,
+        packageSessions: 1
       }
     ];
 
@@ -150,7 +163,7 @@ describe('planSessions', () => {
     expect(result[0].scheduleId).toBe('sched-mon');
     expect(result[0].date).toBe('2026-01-05');
     expect(result[0].classType).toBe('PRIVATE');
-    expect(result[0].rate).toBe(900000);
+    expect(result[0].rate).toBe(225000);
     expect(result[1].scheduleId).toBe('sched-tue');
     expect(result[1].date).toBe('2026-01-06');
     expect(result[1].classType).toBe('GROUP');
@@ -170,7 +183,8 @@ describe('planSessions', () => {
       startTime: '10:00',
       durationMinutes: 60,
       classType: 'PRIVATE',
-      rate: 900000
+      packagePrice: 900000,
+      packageSessions: 4
     };
 
     const result = planSessions([schedule], from, to, new Set());
@@ -191,7 +205,8 @@ describe('planSessions', () => {
       startTime: '10:00',
       durationMinutes: 60,
       classType: 'PRIVATE',
-      rate: 900000
+      packagePrice: 900000,
+      packageSessions: 4
     };
 
     const result = planSessions([schedule], from, to, new Set());
@@ -199,5 +214,27 @@ describe('planSessions', () => {
     expect(result[0].date).toBe('2026-01-05');
     // Should not be ISO string with timezone offset
     expect(result[0].date).not.toContain('T');
+  });
+
+  it('rounds rate when packagePrice does not divide evenly by packageSessions', () => {
+    const from = new Date(2026, 0, 5);
+    const to = new Date(2026, 0, 5);
+
+    const schedule: ScheduleInput = {
+      id: 'sched-round',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      instrument: 'piano',
+      dayOfWeek: 1,
+      startTime: '10:00',
+      durationMinutes: 60,
+      classType: 'PRIVATE',
+      packagePrice: 1000000,
+      packageSessions: 3
+    };
+
+    const result = planSessions([schedule], from, to, new Set());
+
+    expect(result[0].rate).toBe(333333);
   });
 });
