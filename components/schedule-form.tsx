@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { createSchedule, updateSchedule } from "@/lib/actions/schedule";
 import { DAY_LABELS } from "@/lib/validations/schedule";
 import { CLASS_TYPE_LABELS } from "@/lib/domain/constants";
+import { perSessionRate } from "@/lib/domain/rate";
+import { formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,12 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type ScheduleTeacherOption = {
-  id: string;
-  name: string;
-  ratePerSession: number;
-  defaultGroupRate: number | null;
-};
+export type ScheduleTeacherOption = { id: string; name: string };
 export type ScheduleStudentOption = { id: string; name: string; instrument: string };
 
 export type ScheduleRecord = {
@@ -44,7 +41,8 @@ export type ScheduleRecord = {
   startTime: string;
   durationMinutes: number;
   classType: ClassType;
-  rate: number;
+  packagePrice: number;
+  packageSessions: number;
   active: boolean;
 };
 
@@ -65,7 +63,8 @@ const EMPTY_FORM = {
   startTime: "",
   durationMinutes: "60",
   classType: "PRIVATE" as ClassType,
-  rate: "",
+  packagePrice: "",
+  packageSessions: "",
 };
 
 export function ScheduleForm({
@@ -92,7 +91,8 @@ export function ScheduleForm({
         startTime: schedule.startTime,
         durationMinutes: String(schedule.durationMinutes),
         classType: schedule.classType,
-        rate: String(schedule.rate),
+        packagePrice: String(schedule.packagePrice),
+        packageSessions: String(schedule.packageSessions),
       });
     } else {
       setForm(EMPTY_FORM);
@@ -110,33 +110,6 @@ export function ScheduleForm({
     }));
   }
 
-  /** Looks up the teacher's default rate for a class type — `ratePerSession`
-   * for PRIVATE, `defaultGroupRate` for GROUP — used to prefill (and
-   * re-prefill) the rate field. Returns "" if the teacher or its default is
-   * unknown, so the admin has to fill it in manually. */
-  function defaultRateFor(teacherId: string, classType: ClassType): string {
-    const teacher = teachers.find((t) => t.id === teacherId);
-    if (!teacher) return "";
-    const rate = classType === "GROUP" ? teacher.defaultGroupRate : teacher.ratePerSession;
-    return rate != null ? String(rate) : "";
-  }
-
-  function handleTeacherChange(teacherId: string) {
-    setForm((prev) => ({
-      ...prev,
-      teacherId,
-      rate: defaultRateFor(teacherId, prev.classType),
-    }));
-  }
-
-  function handleClassTypeChange(classType: ClassType) {
-    setForm((prev) => ({
-      ...prev,
-      classType,
-      rate: defaultRateFor(prev.teacherId, classType),
-    }));
-  }
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsPending(true);
@@ -149,7 +122,8 @@ export function ScheduleForm({
       startTime: form.startTime,
       durationMinutes: form.durationMinutes,
       classType: form.classType,
-      rate: form.rate,
+      packagePrice: form.packagePrice,
+      packageSessions: form.packageSessions,
     };
 
     const result = isEditing
@@ -166,6 +140,16 @@ export function ScheduleForm({
     }
   }
 
+  const parsedPackagePrice = Number(form.packagePrice);
+  const parsedPackageSessions = Number(form.packageSessions);
+  const computedRate =
+    form.packagePrice !== "" &&
+    form.packageSessions !== "" &&
+    Number.isFinite(parsedPackagePrice) &&
+    Number.isFinite(parsedPackageSessions)
+      ? perSessionRate(parsedPackagePrice, parsedPackageSessions)
+      : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -179,7 +163,10 @@ export function ScheduleForm({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-2">
             <Label>Guru</Label>
-            <Select value={form.teacherId} onValueChange={handleTeacherChange}>
+            <Select
+              value={form.teacherId}
+              onValueChange={(value) => setForm((prev) => ({ ...prev, teacherId: value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih guru" />
               </SelectTrigger>
@@ -219,36 +206,61 @@ export function ScheduleForm({
             />
           </div>
 
+          <div className="grid gap-2">
+            <Label>Tipe Kelas</Label>
+            <Select
+              value={form.classType}
+              onValueChange={(value) =>
+                setForm((prev) => ({ ...prev, classType: value as ClassType }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PRIVATE">{CLASS_TYPE_LABELS.PRIVATE}</SelectItem>
+                <SelectItem value="GROUP">{CLASS_TYPE_LABELS.GROUP}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Tipe Kelas</Label>
-              <Select
-                value={form.classType}
-                onValueChange={(value) => handleClassTypeChange(value as ClassType)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PRIVATE">{CLASS_TYPE_LABELS.PRIVATE}</SelectItem>
-                  <SelectItem value="GROUP">{CLASS_TYPE_LABELS.GROUP}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="rate">Tarif per sesi (Rp)</Label>
+              <Label htmlFor="packagePrice">Harga paket (Rp)</Label>
               <Input
-                id="rate"
+                id="packagePrice"
                 type="number"
                 min={1}
                 step={1}
                 inputMode="numeric"
-                value={form.rate}
-                onChange={(e) => setForm((prev) => ({ ...prev, rate: e.target.value }))}
+                value={form.packagePrice}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, packagePrice: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="packageSessions">Jumlah sesi per paket</Label>
+              <Input
+                id="packageSessions"
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={form.packageSessions}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, packageSessions: e.target.value }))
+                }
                 required
               />
             </div>
           </div>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            {computedRate != null
+              ? `Per sesi: ${formatRupiah(computedRate)}`
+              : "Isi harga paket dan jumlah sesi untuk melihat tarif per sesi."}
+          </p>
 
           <div className="grid gap-2">
             <Label>Hari</Label>

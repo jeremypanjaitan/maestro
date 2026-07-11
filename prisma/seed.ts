@@ -69,14 +69,13 @@ async function main() {
   const guruPassword = "guru123";
   const guruPasswordHash = await hashPassword(guruPassword);
 
-  // `ratePerSession` is each teacher's DEFAULT PRIVATE rate; `defaultGroupRate`
-  // is their default GROUP rate. Both are only used to prefill the schedule
-  // form — the AUTHORITATIVE rate lives per-enrollment on `Schedule.rate`
-  // (see scheduleSeeds below, where private rates vary per student).
+  // Teachers no longer carry any rate — pay is package-based, set
+  // per-enrollment on `Schedule.packagePrice`/`packageSessions` (see
+  // scheduleSeeds below, where package prices vary per student).
   const guruSeeds = [
-    { name: "Budi Santoso", email: "budi@maestro.test", instruments: ["Piano"], ratePerSession: 900000, defaultGroupRate: 500000, phone: "081200000001" },
-    { name: "Siti Aminah", email: "siti@maestro.test", instruments: ["Guitar"], ratePerSession: 900000, defaultGroupRate: 500000, phone: "081200000002" },
-    { name: "Rian Pratama", email: "rian@maestro.test", instruments: ["Drum", "Vocal"], ratePerSession: 900000, defaultGroupRate: 500000, phone: "081200000003" },
+    { name: "Budi Santoso", email: "budi@maestro.test", instruments: ["Piano"], phone: "081200000001" },
+    { name: "Siti Aminah", email: "siti@maestro.test", instruments: ["Guitar"], phone: "081200000002" },
+    { name: "Rian Pratama", email: "rian@maestro.test", instruments: ["Drum", "Vocal"], phone: "081200000003" },
   ];
 
   const teachers = [];
@@ -93,8 +92,6 @@ async function main() {
       data: {
         name: g.name,
         instruments: g.instruments,
-        ratePerSession: g.ratePerSession,
-        defaultGroupRate: g.defaultGroupRate,
         phone: g.phone,
         status: "ACTIVE",
         userId: user.id,
@@ -148,27 +145,27 @@ async function main() {
   //    the same dayOfWeek + startTime.
   // ---------------------------------------------------------------------
   const scheduleSeeds = [
-    // Budi (Piano) — Andi (standard private rate), Bella (discounted private
-    // rate — same teacher/instrument, independent rate per enrollment).
-    { teacher: teacherBudi, student: andi, instrument: "Piano", dayOfWeek: 1, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
-    { teacher: teacherBudi, student: bella, instrument: "Piano", dayOfWeek: 3, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 450000 },
-    // Siti (Guitar) — Citra, Dian, both standard private rate.
-    { teacher: teacherSiti, student: citra, instrument: "Guitar", dayOfWeek: 2, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
-    { teacher: teacherSiti, student: dian, instrument: "Guitar", dayOfWeek: 4, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
-    // Rian (Drum, Vocal) — Eka, Fajar, Gita, Hendra, all standard private rate.
-    { teacher: teacherRian, student: eka, instrument: "Drum", dayOfWeek: 1, startTime: "17:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
-    { teacher: teacherRian, student: fajar, instrument: "Drum", dayOfWeek: 5, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
-    { teacher: teacherRian, student: gita, instrument: "Vocal", dayOfWeek: 2, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
-    { teacher: teacherRian, student: hendra, instrument: "Vocal", dayOfWeek: 4, startTime: "17:00", durationMinutes: 60, classType: "PRIVATE" as const, rate: 900000 },
+    // Budi (Piano) — Andi (standard package), Bella (discounted/"special"
+    // package — same teacher/instrument, independent package per enrollment).
+    { teacher: teacherBudi, student: andi, instrument: "Piano", dayOfWeek: 1, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 900000, packageSessions: 4 },
+    { teacher: teacherBudi, student: bella, instrument: "Piano", dayOfWeek: 3, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 600000, packageSessions: 4 },
+    // Siti (Guitar) — Citra, Dian, both standard package.
+    { teacher: teacherSiti, student: citra, instrument: "Guitar", dayOfWeek: 2, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 900000, packageSessions: 4 },
+    { teacher: teacherSiti, student: dian, instrument: "Guitar", dayOfWeek: 4, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 900000, packageSessions: 4 },
+    // Rian (Drum, Vocal) — Eka, Fajar, Gita, Hendra, all standard package.
+    { teacher: teacherRian, student: eka, instrument: "Drum", dayOfWeek: 1, startTime: "17:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 900000, packageSessions: 4 },
+    { teacher: teacherRian, student: fajar, instrument: "Drum", dayOfWeek: 5, startTime: "15:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 900000, packageSessions: 4 },
+    { teacher: teacherRian, student: gita, instrument: "Vocal", dayOfWeek: 2, startTime: "16:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 900000, packageSessions: 4 },
+    { teacher: teacherRian, student: hendra, instrument: "Vocal", dayOfWeek: 4, startTime: "17:00", durationMinutes: 60, classType: "PRIVATE" as const, packagePrice: 900000, packageSessions: 4 },
     // GROUP class: Budi teaches Kevin, Laras, and Made together — same
     // teacher + same dayOfWeek + same startTime, each their own
-    // enrollment/session, each paid `rate` per attending student. This is
+    // enrollment/session, each paid the package's per-session rate. This is
     // the relaxed-conflict case: multiple GROUP schedules for the same
     // teacher at the same slot are allowed (no same-student, no PRIVATE
     // overlap involved), unlike two PRIVATE schedules which would conflict.
-    { teacher: teacherBudi, student: kevin, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, rate: 500000 },
-    { teacher: teacherBudi, student: laras, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, rate: 500000 },
-    { teacher: teacherBudi, student: made, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, rate: 500000 },
+    { teacher: teacherBudi, student: kevin, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, packagePrice: 500000, packageSessions: 4 },
+    { teacher: teacherBudi, student: laras, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, packagePrice: 500000, packageSessions: 4 },
+    { teacher: teacherBudi, student: made, instrument: "Piano", dayOfWeek: 2, startTime: "10:00", durationMinutes: 60, classType: "GROUP" as const, packagePrice: 500000, packageSessions: 4 },
   ];
 
   const schedules = [];
@@ -182,7 +179,8 @@ async function main() {
         startTime: s.startTime,
         durationMinutes: s.durationMinutes,
         classType: s.classType,
-        rate: s.rate,
+        packagePrice: s.packagePrice,
+        packageSessions: s.packageSessions,
         active: true,
       },
     });
@@ -205,7 +203,8 @@ async function main() {
     startTime: s.startTime,
     durationMinutes: s.durationMinutes,
     classType: s.classType,
-    rate: s.rate,
+    packagePrice: s.packagePrice,
+    packageSessions: s.packageSessions,
   }));
 
   const planned = planSessions(scheduleInputs, firstDay, lastDay, new Set());
@@ -243,6 +242,8 @@ async function main() {
       durationMinutes: p.durationMinutes,
       classType: p.classType,
       rate: p.rate,
+      packagePrice: p.packagePrice,
+      packageSessions: p.packageSessions,
       status: p.status,
     })),
   });

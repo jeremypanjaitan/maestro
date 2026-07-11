@@ -16,19 +16,6 @@ const instruments = z
   .array(z.string().trim().min(1))
   .min(1, "Pilih minimal satu instrumen");
 
-const ratePerSession = z.coerce
-  .number({ error: "Tarif wajib diisi" })
-  .int("Tarif harus bilangan bulat")
-  .positive("Tarif harus lebih dari 0");
-
-/** Default GROUP-class rate used only to prefill the schedule form — not
- * authoritative; the actual per-enrollment rate lives on `Schedule.rate`. */
-const defaultGroupRate = z.coerce
-  .number()
-  .int("Tarif grup harus bilangan bulat")
-  .min(0, "Tarif grup tidak boleh negatif")
-  .optional();
-
 const phone = z
   .string()
   .trim()
@@ -39,13 +26,13 @@ const status = z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE");
 
 const email = z.string().trim().toLowerCase().email("Email tidak valid");
 
-/** Schema for creating a teacher — also provisions a linked GURU user account. */
+/** Schema for creating a teacher — also provisions a linked GURU user account.
+ * Teachers no longer carry a rate: pay is package-based, set per-enrollment
+ * on `Schedule.packagePrice`/`packageSessions`. */
 export const createTeacherSchema = z.object({
   name,
   email,
   instruments,
-  ratePerSession,
-  defaultGroupRate,
   phone,
   status,
 });
@@ -54,8 +41,6 @@ export const createTeacherSchema = z.object({
 export const updateTeacherSchema = z.object({
   name,
   instruments,
-  ratePerSession,
-  defaultGroupRate,
   phone,
   status,
 });

@@ -50,7 +50,6 @@ export type GuruDashboardData = {
   periodMonth: number;
   periodYear: number;
   hadirCountThisMonth: number;
-  ratePerSession: number;
   estimatedHonor: number;
   distinctStudentCount: number;
   studentProgressSummary: GuruStudentProgress[];
@@ -146,7 +145,7 @@ export async function getGuruDashboard(): Promise<GuruDashboardData> {
 
   const teacher = await prisma.teacher.findUnique({
     where: { id: teacherId },
-    select: { name: true, ratePerSession: true },
+    select: { name: true },
   });
   if (!teacher) {
     throw new Error("Data guru tidak ditemukan");
@@ -220,7 +219,6 @@ export async function getGuruDashboard(): Promise<GuruDashboardData> {
     periodMonth,
     periodYear,
     hadirCountThisMonth,
-    ratePerSession: teacher.ratePerSession,
     estimatedHonor,
     distinctStudentCount: progressMap.size,
     studentProgressSummary,

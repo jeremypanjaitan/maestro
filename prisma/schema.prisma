@@ -59,13 +59,11 @@ model User {
 }
 
 model Teacher {
-  id               String        @id @default(cuid())
-  name             String
-  instruments      String[]
-  ratePerSession   Int
-  defaultGroupRate Int?
-  phone            String?
-  status           TeacherStatus @default(ACTIVE)
+  id             String        @id @default(cuid())
+  name           String
+  instruments    String[]
+  phone          String?
+  status         TeacherStatus @default(ACTIVE)
   user           User?         @relation(fields: [userId], references: [id])
   userId         String?       @unique
   schedules      Schedule[]
@@ -99,7 +97,8 @@ model Schedule {
   startTime       String // "HH:mm"
   durationMinutes Int       @default(60)
   classType       ClassType @default(PRIVATE)
-  rate            Int       @default(0)
+  packagePrice    Int       @default(0)
+  packageSessions Int       @default(1)
   active          Boolean   @default(true)
   sessions        Session[]
   createdAt       DateTime  @default(now())
@@ -118,6 +117,8 @@ model Session {
   durationMinutes Int           @default(60)
   classType       ClassType     @default(PRIVATE)
   rate            Int           @default(0)
+  packagePrice    Int           @default(0)
+  packageSessions Int           @default(1)
   status          SessionStatus @default(SCHEDULED)
   rescheduledTo   Session?      @relation("Reschedule", fields: [rescheduledToId], references: [id])
   rescheduledToId String?       @unique

@@ -54,8 +54,7 @@ export async function createTeacher(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { name, email, instruments, ratePerSession, defaultGroupRate, phone, status } =
-    parsed.data;
+  const { name, email, instruments, phone, status } = parsed.data;
 
   try {
     const passwordHash = await bcrypt.hash(DEFAULT_GURU_PASSWORD, 10);
@@ -68,8 +67,6 @@ export async function createTeacher(
         data: {
           name,
           instruments,
-          ratePerSession,
-          defaultGroupRate,
           phone,
           status,
           userId: user.id,
@@ -102,13 +99,13 @@ export async function updateTeacher(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { name, instruments, ratePerSession, defaultGroupRate, phone, status } = parsed.data;
+  const { name, instruments, phone, status } = parsed.data;
 
   try {
     await prisma.$transaction(async (tx) => {
       const teacher = await tx.teacher.update({
         where: { id },
-        data: { name, instruments, ratePerSession, defaultGroupRate, phone, status },
+        data: { name, instruments, phone, status },
       });
       if (teacher.userId) {
         await tx.user.update({

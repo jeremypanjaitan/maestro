@@ -1,3 +1,5 @@
+import { perSessionRate } from './rate';
+
 export type ScheduleInput = {
   id: string;
   teacherId: string;
@@ -7,7 +9,8 @@ export type ScheduleInput = {
   startTime: string;
   durationMinutes: number;
   classType: 'PRIVATE' | 'GROUP';
-  rate: number;
+  packagePrice: number;
+  packageSessions: number;
 };
 
 export type PlannedSession = {
@@ -18,6 +21,8 @@ export type PlannedSession = {
   startTime: string;
   durationMinutes: number;
   classType: 'PRIVATE' | 'GROUP';
+  packagePrice: number;
+  packageSessions: number;
   rate: number;
 };
 
@@ -71,7 +76,9 @@ export function planSessions(
             startTime: schedule.startTime,
             durationMinutes: schedule.durationMinutes,
             classType: schedule.classType,
-            rate: schedule.rate
+            packagePrice: schedule.packagePrice,
+            packageSessions: schedule.packageSessions,
+            rate: perSessionRate(schedule.packagePrice, schedule.packageSessions)
           });
         }
       }
