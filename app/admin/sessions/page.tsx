@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { GenerateSessionsDialog } from "@/components/generate-sessions-dialog";
+import { AddSessionDialog } from "@/components/add-session-dialog";
 import { PageHeader } from "@/components/page-header";
 import { SessionsTable, type SessionRecord } from "@/components/sessions-table";
 
@@ -14,7 +15,7 @@ function endOfCurrentMonthUTC(): Date {
 }
 
 export default async function AdminSessionsPage() {
-  const [sessions, teachers] = await Promise.all([
+  const [sessions, teachers, students] = await Promise.all([
     prisma.session.findMany({
       where: {
         date: { gte: startOfCurrentMonthUTC(), lte: endOfCurrentMonthUTC() },
@@ -27,6 +28,11 @@ export default async function AdminSessionsPage() {
       },
     }),
     prisma.teacher.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.student.findMany({
       where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
@@ -52,6 +58,7 @@ export default async function AdminSessionsPage() {
         title="Kelola Sesi"
         description="Sesi bulan berjalan yang dibuat dari jadwal aktif."
       >
+        <AddSessionDialog teachers={teachers} students={students} />
         <GenerateSessionsDialog />
       </PageHeader>
 

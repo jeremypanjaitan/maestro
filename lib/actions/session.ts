@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { planSessions, type ScheduleInput } from "@/lib/domain/generateSessions";
 import { toDbDate, formatDbDate } from "@/lib/domain/dbDate";
 import { hasConflict, type Slot } from "@/lib/domain/conflict";
+import { perSessionRate } from "@/lib/domain/rate";
 
 export type SessionActionResult = { ok: true } | { ok: false; error: string };
 
@@ -319,6 +320,102 @@ export async function rescheduleSession(
       data: { status: "RESCHEDULE", rescheduledToId: newSession.id },
     });
   });
+
+  revalidatePath("/admin/sessions");
+  revalidatePath("/guru/sessions");
+  return { ok: true };
+}
+
+export type AdHocSessionInput = {
+  teacherId: string;
+  studentId: string;
+  dateISO: string;
+  startTime: string;
+  durationMinutes: number | string;
+  classType: "PRIVATE" | "GROUP";
+  packagePrice: number | string;
+  packageSessions: number | string;
+};
+
+/**
+ * Create a single one-off session directly (no Schedule / no generate step).
+ * scheduleId is null; rate is derived from the package (harga / jumlah sesi).
+ * Conflict-checked against other sessions on the same date (group-aware).
+ */
+export async function createAdHocSession(
+  input: AdHocSessionInput,
+): Promise<SessionActionResult> {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
+  const { teacherId, studentId, dateISO, startTime, classType } = input;
+  const durationMinutes = Number(input.durationMinutes);
+  const packagePrice = Number(input.packagePrice);
+  const packageSessions = Number(input.packageSessions);
+
+  if (!teacherId || !studentId) {
+    return { ok: false, error: "Guru dan murid wajib dipilih" };
+  }
+  if (!isValidCalendarDate(dateISO) || !isValidClockTime(startTime)) {
+    return { ok: false, error: "Tanggal atau jam tidak valid" };
+  }
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    return { ok: false, error: "Durasi tidak valid" };
+  }
+  if (!Number.isFinite(packagePrice) || packagePrice < 1) {
+    return { ok: false, error: "Harga paket tidak valid" };
+  }
+  if (!Number.isFinite(packageSessions) || packageSessions < 1) {
+    return { ok: false, error: "Jumlah sesi per paket tidak valid" };
+  }
+  if (classType !== "PRIVATE" && classType !== "GROUP") {
+    return { ok: false, error: "Tipe kelas tidak valid" };
+  }
+
+  const date = toDbDate(dateISO);
+  const sameDaySessions = await prisma.session.findMany({
+    where: { date, status: { notIn: ["CANCEL", "RESCHEDULE"] } },
+    select: {
+      teacherId: true,
+      studentId: true,
+      startTime: true,
+      durationMinutes: true,
+      classType: true,
+    },
+  });
+  const candidate: Slot = {
+    teacherId,
+    studentId,
+    startTime,
+    durationMinutes,
+    classType,
+  };
+  if (hasConflict(candidate, sameDaySessions)) {
+    return {
+      ok: false,
+      error: "Sesi bentrok dengan sesi lain (guru atau murid sudah terpakai di jam itu)",
+    };
+  }
+
+  try {
+    await prisma.session.create({
+      data: {
+        scheduleId: null,
+        teacherId,
+        studentId,
+        date,
+        startTime,
+        durationMinutes,
+        classType,
+        packagePrice,
+        packageSessions,
+        rate: perSessionRate(packagePrice, packageSessions),
+        status: "SCHEDULED",
+      },
+    });
+  } catch {
+    return { ok: false, error: "Gagal membuat sesi (guru/murid tidak valid)" };
+  }
 
   revalidatePath("/admin/sessions");
   revalidatePath("/guru/sessions");
