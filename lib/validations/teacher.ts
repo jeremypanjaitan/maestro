@@ -2,12 +2,9 @@ import { z } from "zod";
 
 /** Known instruments offered by the school. Used to build the checkbox group in the teacher form. */
 export const INSTRUMENTS = [
-  "Piano",
-  "Guitar",
-  "Drum",
-  "Violin",
-  "Saxophone",
-  "Vocal",
+  "Saxophone Soprano",
+  "Saxophone Alto",
+  "Saxophone Tenor",
 ] as const;
 
 const name = z.string().trim().min(1, "Nama wajib diisi");

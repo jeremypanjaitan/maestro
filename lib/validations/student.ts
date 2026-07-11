@@ -3,12 +3,9 @@ import { z } from "zod";
 /** Known instruments offered by the school. Used to build the select in the student form.
  * Free text is also accepted, so this is a suggestion list rather than a hard enum. */
 export const INSTRUMENTS = [
-  "Piano",
-  "Guitar",
-  "Drum",
-  "Violin",
-  "Saxophone",
-  "Vocal",
+  "Saxophone Soprano",
+  "Saxophone Alto",
+  "Saxophone Tenor",
 ] as const;
 
 /** Suggested proficiency levels. Free text is also accepted. */

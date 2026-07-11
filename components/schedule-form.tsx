@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { createSchedule, updateSchedule } from "@/lib/actions/schedule";
 import { DAY_LABELS } from "@/lib/validations/schedule";
+import { INSTRUMENTS } from "@/lib/validations/student";
 import { CLASS_TYPE_LABELS } from "@/lib/domain/constants";
 import { perSessionRate } from "@/lib/domain/rate";
 import { formatRupiah } from "@/lib/utils";
@@ -198,12 +199,26 @@ export function ScheduleForm({
 
           <div className="grid gap-2">
             <Label htmlFor="instrument">Instrumen</Label>
-            <Input
-              id="instrument"
+            <Select
               value={form.instrument}
-              onChange={(e) => setForm((prev) => ({ ...prev, instrument: e.target.value }))}
-              required
-            />
+              onValueChange={(value) =>
+                setForm((prev) => ({ ...prev, instrument: value }))
+              }
+            >
+              <SelectTrigger id="instrument">
+                <SelectValue placeholder="Pilih instrumen" />
+              </SelectTrigger>
+              <SelectContent>
+                {INSTRUMENTS.map((instrument) => (
+                  <SelectItem key={instrument} value={instrument}>
+                    {instrument}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Terisi otomatis dari instrumen murid saat murid dipilih; bisa diganti.
+            </p>
           </div>
 
           <div className="grid gap-2">
