@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { upsertLessonReport } from "@/lib/actions/lessonReport";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -27,7 +26,6 @@ type LessonReportFormProps = {
 
 const EMPTY_FORM = {
   material: "",
-  grade: "",
   notes: "",
 };
 
@@ -35,7 +33,6 @@ function toFormState(report?: LessonReportRecord | null) {
   if (!report) return EMPTY_FORM;
   return {
     material: report.material ?? "",
-    grade: report.grade ?? "",
     notes: report.notes ?? "",
   };
 }
@@ -87,17 +84,6 @@ export function LessonReportForm({ sessionId, report }: LessonReportFormProps) {
           value={form.material}
           onChange={(e) => setForm((prev) => ({ ...prev, material: e.target.value }))}
           placeholder="Materi yang diajarkan pada sesi ini"
-        />
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="grade">Nilai</Label>
-        <Input
-          id="grade"
-          value={form.grade}
-          onChange={(e) => setForm((prev) => ({ ...prev, grade: e.target.value }))}
-          placeholder="Contoh: A, 85"
-          className="sm:max-w-32"
         />
       </div>
 
