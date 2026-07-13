@@ -103,6 +103,8 @@ export function ScheduleCalendar({
   onAddSession,
 }: ScheduleCalendarProps) {
   const weekDates = buildWeekDates(weekStart);
+  // Clicking a session opens its read-only report page, per role.
+  const reportBasePath = viewMode === "admin" ? "/admin/sessions" : "/guru/sessions";
 
   const sessionsByDate = new Map<string, CalendarSession[]>();
   for (const session of sessions) {
@@ -172,34 +174,37 @@ export function ScheduleCalendar({
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {daySessions.map((session) => (
-                      <li
-                        key={session.id}
-                        className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs"
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-medium text-foreground">
-                            {session.startTime}
-                          </span>
-                          <SessionStatusBadge status={session.status} />
-                        </div>
-                        {viewMode === "admin" ? (
-                          <>
+                      <li key={session.id}>
+                        <Link
+                          href={`${reportBasePath}/${session.id}/report`}
+                          title="Lihat laporan"
+                          className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs transition-colors hover:bg-muted"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-medium text-foreground">
+                              {session.startTime}
+                            </span>
+                            <SessionStatusBadge status={session.status} />
+                          </div>
+                          {viewMode === "admin" ? (
+                            <>
+                              <span className="text-foreground">
+                                {session.student.name}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {session.teacher.name}
+                              </span>
+                            </>
+                          ) : (
                             <span className="text-foreground">
                               {session.student.name}
                             </span>
-                            <span className="text-muted-foreground">
-                              {session.teacher.name}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-foreground">
-                            {session.student.name}
+                          )}
+                          <span className="text-muted-foreground">
+                            {session.instrument} &middot; {session.durationMinutes}
+                            m
                           </span>
-                        )}
-                        <span className="text-muted-foreground">
-                          {session.instrument} &middot; {session.durationMinutes}
-                          m
-                        </span>
+                        </Link>
                       </li>
                     ))}
                   </ul>
