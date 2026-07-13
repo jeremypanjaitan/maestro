@@ -139,6 +139,15 @@ export function ScheduleCalendar({
           {weekDates.map((date, index) => {
             const daySessions = (sessionsByDate.get(date) ?? []).slice();
             const { day, month } = parseDateParts(date);
+            // Group sessions that share the same start time so concurrent
+            // sessions are shown together (side-by-side, wrapping if narrow)
+            // under a single time label. daySessions is already time-sorted.
+            const timeGroups: Array<{ time: string; items: CalendarSession[] }> = [];
+            for (const s of daySessions) {
+              const last = timeGroups[timeGroups.length - 1];
+              if (last && last.time === s.startTime) last.items.push(s);
+              else timeGroups.push({ time: s.startTime, items: [s] });
+            }
 
             return (
               <div
@@ -167,47 +176,52 @@ export function ScheduleCalendar({
                   </div>
                 </div>
 
-                {daySessions.length === 0 ? (
+                {timeGroups.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
                     Tidak ada sesi
                   </p>
                 ) : (
-                  <ul className="flex flex-col gap-2">
-                    {daySessions.map((session) => (
-                      <li key={session.id}>
-                        <Link
-                          href={`${reportBasePath}/${session.id}/report`}
-                          title="Lihat laporan"
-                          className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs transition-colors hover:bg-muted"
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-medium text-foreground">
-                              {session.startTime}
-                            </span>
-                            <SessionStatusBadge status={session.status} />
-                          </div>
-                          {viewMode === "admin" ? (
-                            <>
-                              <span className="text-foreground">
-                                {session.student.name}
-                              </span>
-                              <span className="text-muted-foreground">
-                                {session.teacher.name}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-foreground">
-                              {session.student.name}
-                            </span>
-                          )}
-                          <span className="text-muted-foreground">
-                            {session.instrument} &middot; {session.durationMinutes}
-                            m
+                  <div className="flex flex-col gap-3">
+                    {timeGroups.map((group) => (
+                      <div key={group.time} className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-foreground">
+                            {group.time}
                           </span>
-                        </Link>
-                      </li>
+                          {group.items.length > 1 ? (
+                            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                              {group.items.length} sesi
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {group.items.map((session) => (
+                            <Link
+                              key={session.id}
+                              href={`${reportBasePath}/${session.id}/report`}
+                              title="Lihat laporan"
+                              className="flex min-w-[7rem] flex-1 basis-32 flex-col gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs transition-colors hover:bg-muted"
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-medium text-foreground">
+                                  {session.student.name}
+                                </span>
+                                <SessionStatusBadge status={session.status} />
+                              </div>
+                              {viewMode === "admin" ? (
+                                <span className="text-muted-foreground">
+                                  {session.teacher.name}
+                                </span>
+                              ) : null}
+                              <span className="text-muted-foreground">
+                                {session.instrument} &middot; {session.durationMinutes}m
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             );
