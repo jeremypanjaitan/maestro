@@ -5,30 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ClassType, SessionStatus } from "@prisma/client";
 import { FileText, MoreHorizontal, Pencil } from "lucide-react";
-import { toast } from "sonner";
 
-import { cancelSession, updateSessionStatus } from "@/lib/actions/session";
 import { DAY_LABELS } from "@/lib/validations/schedule";
 import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClassTypeBadge, SessionStatusBadge } from "@/components/status-badge";
+import { ClassTypeBadge } from "@/components/status-badge";
+import { AttendanceControls } from "@/components/attendance-controls";
 import { EditSessionDialog } from "@/components/edit-session-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MultiSelectFilter } from "@/components/multi-select-filter";
@@ -68,16 +56,6 @@ type SessionsTableProps = {
   initialTo: string;
 };
 
-/** Statuses settable from this table's row menu (RESCHEDULE excluded — that
- * flow creates a replacement session and belongs to Task 16). */
-const ASSIGNABLE_STATUSES: SessionStatus[] = [
-  "SCHEDULED",
-  "HADIR",
-  "MURID_TIDAK_HADIR",
-  "GURU_TIDAK_HADIR",
-];
-
-
 function formatDate(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -101,9 +79,7 @@ export function SessionsTable({
   // just the sessions already loaded. Teacher/status stay client-side.
   const [fromFilter, setFromFilter] = useState<string>(initialFrom);
   const [toFilter, setToFilter] = useState<string>(initialTo);
-  const [cancelTarget, setCancelTarget] = useState<SessionRecord | null>(null);
   const [editTarget, setEditTarget] = useState<SessionRecord | null>(null);
-  const [isPending, setIsPending] = useState(false);
 
   function applyRange(from: string, to: string) {
     router.push(`/admin/sessions?from=${from}&to=${to}`);
@@ -117,32 +93,6 @@ export function SessionsTable({
       return true;
     });
   }, [sessions, teacherFilter, studentFilter, statusFilter]);
-
-  async function handleStatusChange(session: SessionRecord, status: SessionStatus) {
-    setIsPending(true);
-    const result = await updateSessionStatus(session.id, status);
-    setIsPending(false);
-
-    if (result.ok) {
-      toast.success(`Status diubah ke ${SESSION_STATUS_LABELS[status]}`);
-    } else {
-      toast.error(result.error);
-    }
-  }
-
-  async function confirmCancel() {
-    if (!cancelTarget) return;
-    setIsPending(true);
-    const result = await cancelSession(cancelTarget.id);
-    setIsPending(false);
-
-    if (result.ok) {
-      toast.success("Sesi dibatalkan");
-      setCancelTarget(null);
-    } else {
-      toast.error(result.error);
-    }
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -243,12 +193,15 @@ export function SessionsTable({
                         <ClassTypeBadge classType={session.classType} />
                       </TableCell>
                       <TableCell>
-                        <SessionStatusBadge status={session.status} />
+                        <AttendanceControls
+                          sessionId={session.id}
+                          status={session.status}
+                        />
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-sm" disabled={isPending}>
+                            <Button variant="ghost" size="icon-sm">
                               <MoreHorizontal />
                               <span className="sr-only">Aksi</span>
                             </Button>
@@ -264,23 +217,6 @@ export function SessionsTable({
                               <Pencil />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {ASSIGNABLE_STATUSES.map((status) => (
-                              <DropdownMenuItem
-                                key={status}
-                                disabled={status === session.status}
-                                onSelect={() => handleStatusChange(session, status)}
-                              >
-                                {SESSION_STATUS_LABELS[status]}
-                              </DropdownMenuItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              disabled={session.status === "CANCEL"}
-                              onSelect={() => setCancelTarget(session)}
-                            >
-                              Batalkan sesi
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -292,30 +228,6 @@ export function SessionsTable({
           </div>
         </CardContent>
       </Card>
-
-      <AlertDialog
-        open={cancelTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setCancelTarget(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Batalkan sesi?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sesi {cancelTarget?.teacher.name} - {cancelTarget?.student.name} pada{" "}
-              {cancelTarget ? formatDate(cancelTarget.date) : ""} akan ditandai
-              CANCEL.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCancel} disabled={isPending}>
-              {isPending ? "Memproses..." : "Ya, batalkan"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <EditSessionDialog
         open={editTarget !== null}
