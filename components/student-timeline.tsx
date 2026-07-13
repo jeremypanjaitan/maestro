@@ -5,6 +5,7 @@ import type { TimelineEntry } from "@/lib/queries/history";
 import { Card } from "@/components/ui/card";
 import { SessionStatusBadge } from "@/components/status-badge";
 import { RichText } from "@/components/rich-text";
+import { PhotoViewer } from "@/components/photo-viewer";
 
 type StudentTimelineProps = {
   entries: TimelineEntry[];
@@ -99,8 +100,7 @@ export function StudentTimeline({ entries }: StudentTimelineProps) {
                   const url = buildDataUrl(attachment.mimeType, attachment.dataBase64);
                   if (attachment.type === "PHOTO") {
                     return (
-                      // eslint-disable-next-line @next/next/no-img-element -- base64 data URI, next/image doesn't add value here
-                      <img
+                      <PhotoViewer
                         key={attachment.id}
                         src={url}
                         alt={attachment.filename}

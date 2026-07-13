@@ -10,8 +10,9 @@ import {
   deleteAttachment,
   upsertLessonReport,
 } from "@/lib/actions/lessonReport";
-import { buildDataUrl, fileToBase64, validateFile } from "@/lib/files";
+import { buildDataUrl, compressImageIfNeeded, fileToBase64, validateFile } from "@/lib/files";
 import { Button } from "@/components/ui/button";
+import { PhotoViewer } from "@/components/photo-viewer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,14 +72,19 @@ export function AttachmentUploader({
     event.target.value = ""; // allow re-selecting the same file again later
     if (!file) return;
 
-    const validation = validateFile(file);
-    if (!validation.ok) {
-      toast.error(validation.error);
-      return;
-    }
-
     setIsUploading(true);
     try {
+      // Large photos (>2MB) are compressed client-side before validation so
+      // they have a chance to pass the PHOTO size cap instead of being
+      // rejected outright. No-op for non-images or files already small.
+      const finalFile = await compressImageIfNeeded(file);
+
+      const validation = validateFile(finalFile);
+      if (!validation.ok) {
+        toast.error(validation.error);
+        return;
+      }
+
       // Ensure a LessonReport exists: create an empty one on the fly if the
       // user hasn't pressed "Simpan Laporan" yet.
       let targetReportId = reportId;
@@ -91,11 +97,11 @@ export function AttachmentUploader({
         targetReportId = created.reportId;
       }
 
-      const dataBase64 = await fileToBase64(file);
+      const dataBase64 = await fileToBase64(finalFile);
       const result = await addAttachment(targetReportId, {
         type: validation.type,
-        filename: file.name,
-        mimeType: file.type,
+        filename: finalFile.name,
+        mimeType: finalFile.type,
         dataBase64,
       });
       if (result.ok) {
@@ -150,8 +156,7 @@ export function AttachmentUploader({
                 </div>
 
                 {attachment.type === "PHOTO" && (
-                  // eslint-disable-next-line @next/next/no-img-element -- base64 data URI, not a static asset next/image can optimize
-                  <img
+                  <PhotoViewer
                     src={url}
                     alt={attachment.filename}
                     className="max-h-48 w-full rounded object-cover"

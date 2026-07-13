@@ -1,3 +1,4 @@
+import imageCompression from "browser-image-compression";
 import type { AttachmentType } from "@prisma/client";
 
 /**
@@ -121,4 +122,38 @@ export function fileToBase64(file: File): Promise<string> {
  * pair — the mirror image of what `fileToBase64` strips off. */
 export function buildDataUrl(mimeType: string, dataBase64: string): string {
   return `data:${mimeType};base64,${dataBase64}`;
+}
+
+/**
+ * Compresses an image `File` client-side when it's over 2MB, so large
+ * phone-camera photos (3-5MB is common) have a chance to pass the PHOTO
+ * `PHOTO_MAX_BYTES` server check instead of being rejected outright.
+ *
+ * - Non-images and images already at/under 2MB are returned unchanged.
+ * - SVG never reaches here in practice (`mimeTypeToAttachmentType` rejects
+ *   it upstream), and it can't be raster-compressed anyway, but this
+ *   function doesn't special-case it -- if `imageCompression` were ever
+ *   handed one, the try/catch below falls back to the original file and
+ *   lets the existing size validation handle it.
+ * - If compression throws for any reason, fall back to the original file
+ *   (again, existing validation is the safety net).
+ *
+ * Client-only (delegates to `browser-image-compression`, which uses the
+ * DOM/canvas/worker APIs) -- never call this from a server action.
+ */
+export async function compressImageIfNeeded(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.size <= PHOTO_MAX_BYTES) {
+    return file;
+  }
+
+  try {
+    return await imageCompression(file, {
+      maxSizeMB: 1.5,
+      maxWidthOrHeight: 2500,
+      useWebWorker: true,
+      initialQuality: 0.8,
+    });
+  } catch {
+    return file;
+  }
 }

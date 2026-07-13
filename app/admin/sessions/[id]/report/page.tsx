@@ -6,6 +6,7 @@ import { formatDbDate } from "@/lib/domain/dbDate";
 import { PageHeader } from "@/components/page-header";
 import { SessionStatusBadge } from "@/components/status-badge";
 import { RichText } from "@/components/rich-text";
+import { PhotoViewer } from "@/components/photo-viewer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AdminSessionReportPageProps = {
@@ -139,8 +140,7 @@ export default async function AdminSessionReportPage({ params }: AdminSessionRep
                       </div>
 
                       {attachment.type === "PHOTO" && (
-                        // eslint-disable-next-line @next/next/no-img-element -- base64 data URI, not a static asset next/image can optimize
-                        <img
+                        <PhotoViewer
                           src={url}
                           alt={attachment.filename}
                           className="max-h-48 w-full rounded object-cover"
