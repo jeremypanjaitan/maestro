@@ -32,13 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelectFilter } from "@/components/multi-select-filter";
 import {
   Table,
   TableBody,
@@ -84,7 +78,6 @@ const ASSIGNABLE_STATUSES: SessionStatus[] = [
   "GURU_TIDAK_HADIR",
 ];
 
-const ALL = "ALL";
 
 function formatDate(date: Date): string {
   const year = date.getUTCFullYear();
@@ -101,9 +94,10 @@ export function SessionsTable({
   initialTo,
 }: SessionsTableProps) {
   const router = useRouter();
-  const [teacherFilter, setTeacherFilter] = useState<string>(ALL);
-  const [studentFilter, setStudentFilter] = useState<string>(ALL);
-  const [statusFilter, setStatusFilter] = useState<string>(ALL);
+  // Multi-select filters: empty array = no filter (show all).
+  const [teacherFilter, setTeacherFilter] = useState<string[]>([]);
+  const [studentFilter, setStudentFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   // Date range is server-driven (via the URL) so ANY month is reachable, not
   // just the sessions already loaded. Teacher/status stay client-side.
   const [fromFilter, setFromFilter] = useState<string>(initialFrom);
@@ -118,9 +112,9 @@ export function SessionsTable({
 
   const filtered = useMemo(() => {
     return sessions.filter((session) => {
-      if (teacherFilter !== ALL && session.teacher.id !== teacherFilter) return false;
-      if (studentFilter !== ALL && session.student.id !== studentFilter) return false;
-      if (statusFilter !== ALL && session.status !== statusFilter) return false;
+      if (teacherFilter.length > 0 && !teacherFilter.includes(session.teacher.id)) return false;
+      if (studentFilter.length > 0 && !studentFilter.includes(session.student.id)) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(session.status)) return false;
       return true;
     });
   }, [sessions, teacherFilter, studentFilter, statusFilter]);
@@ -156,53 +150,35 @@ export function SessionsTable({
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">Guru</span>
-          <Select value={teacherFilter} onValueChange={setTeacherFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Semua guru</SelectItem>
-              {teachers.map((teacher) => (
-                <SelectItem key={teacher.id} value={teacher.id}>
-                  {teacher.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelectFilter
+            allLabel="Semua guru"
+            selected={teacherFilter}
+            onChange={setTeacherFilter}
+            options={teachers.map((t) => ({ value: t.id, label: t.name }))}
+          />
         </div>
 
         <div className="grid gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">Murid</span>
-          <Select value={studentFilter} onValueChange={setStudentFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Semua murid</SelectItem>
-              {students.map((student) => (
-                <SelectItem key={student.id} value={student.id}>
-                  {student.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelectFilter
+            allLabel="Semua murid"
+            selected={studentFilter}
+            onChange={setStudentFilter}
+            options={students.map((s) => ({ value: s.id, label: s.name }))}
+          />
         </div>
 
         <div className="grid gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">Status</span>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Semua status</SelectItem>
-              {Object.entries(SESSION_STATUS_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelectFilter
+            allLabel="Semua status"
+            selected={statusFilter}
+            onChange={setStatusFilter}
+            options={Object.entries(SESSION_STATUS_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+          />
         </div>
 
         <div className="grid gap-1.5">
