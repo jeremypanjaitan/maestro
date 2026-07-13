@@ -8,7 +8,6 @@ import {
   getStudentProgressRecap,
   getPayrollRecap,
 } from "@/lib/queries/reports";
-import { formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { ReportFilters } from "@/components/report-filters";
 import { SessionStatusBadge, PayrollStatusBadge } from "@/components/status-badge";
@@ -275,8 +274,11 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
         </TabsContent>
 
         <TabsContent value="payroll" className="flex flex-col gap-4 pt-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <StatTile label="Grand Total" value={formatRupiah(payroll.grandTotal)} />
+          {/* Money columns (Grand Total stat tile + per-row Total) are hidden
+              here — tarif/payroll UI is hidden app-wide, see
+              `.superpowers/sdd/hide-tarif.md`. The underlying recap query and
+              its amounts are untouched. */}
+          <div className="flex flex-wrap items-start justify-end gap-3">
             <ExportLinks reportType="payroll" query={query} />
           </div>
 
@@ -289,13 +291,12 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
                       <TableHead>Guru</TableHead>
                       <TableHead>Periode</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {payroll.rows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">
                           Tidak ada data pada periode ini.
                         </TableCell>
                       </TableRow>
@@ -307,7 +308,6 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
                           <TableCell>
                             <PayrollStatusBadge status={row.status} />
                           </TableCell>
-                          <TableCell className="text-right">{formatRupiah(row.total)}</TableCell>
                         </TableRow>
                       ))
                     )}

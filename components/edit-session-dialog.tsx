@@ -9,8 +9,6 @@ import { updateSession } from "@/lib/actions/session";
 import type { SessionRecord } from "@/components/sessions-table";
 import { CLASS_TYPE_LABELS } from "@/lib/domain/constants";
 import { formatDbDate } from "@/lib/domain/dbDate";
-import { perSessionRate } from "@/lib/domain/rate";
-import { formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -96,11 +94,10 @@ export function EditSessionDialog({
     }
   }, [session]);
 
-  const price = Number(form.packagePrice);
-  const sessions = Number(form.packageSessions);
-  const perSession =
-    price >= 1 && sessions >= 1 ? perSessionRate(price, sessions) : null;
-
+  // packagePrice/packageSessions are seeded from the session above and never
+  // exposed as inputs (tarif UI is hidden — see
+  // `.superpowers/sdd/hide-tarif.md`), so they're sent back to `updateSession`
+  // unchanged and never wipe out an existing price.
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -135,8 +132,7 @@ export function EditSessionDialog({
         <DialogHeader>
           <DialogTitle>Edit Sesi</DialogTitle>
           <DialogDescription>
-            Ubah guru, murid, tipe kelas, paket, tanggal, jam, atau durasi
-            sesi ini.
+            Ubah guru, murid, tipe kelas, tanggal, jam, atau durasi sesi ini.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -190,40 +186,6 @@ export function EditSessionDialog({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="e-price">Harga paket (Rp)</Label>
-              <Input
-                id="e-price"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={form.packagePrice}
-                onChange={(e) => set("packagePrice", e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="e-sessions">Jumlah sesi per paket</Label>
-              <Input
-                id="e-sessions"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={form.packageSessions}
-                onChange={(e) => set("packageSessions", e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {perSession !== null
-              ? `Per sesi: ${formatRupiah(perSession)}`
-              : "Isi harga paket dan jumlah sesi untuk melihat tarif per sesi."}
-          </p>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">

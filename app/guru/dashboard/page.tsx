@@ -1,11 +1,10 @@
-import { CalendarClock, Wallet, Users } from "lucide-react";
+import { CalendarClock, Users } from "lucide-react";
 
 import { getGuruDashboard } from "@/lib/queries/dashboard";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { SessionStatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPeriod, formatRupiah } from "@/lib/utils";
 
 export default async function GuruDashboardPage() {
   const data = await getGuruDashboard();
@@ -17,17 +16,11 @@ export default async function GuruDashboardPage() {
         description="Ringkasan jadwal dan sesi Anda hari ini."
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           title="Sesi Hari Ini"
           value={data.todaySessions.length}
           icon={CalendarClock}
-        />
-        <StatCard
-          title="Estimasi Honor Bulan Ini"
-          value={formatRupiah(data.estimatedHonor)}
-          subtitle={`${data.hadirCountThisMonth} sesi hadir · ${formatPeriod(data.periodMonth, data.periodYear)}`}
-          icon={Wallet}
         />
         <StatCard
           title="Murid Diajar Bulan Ini"

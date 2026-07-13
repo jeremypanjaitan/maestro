@@ -1,11 +1,10 @@
-import { Users, GraduationCap, CalendarClock, Wallet } from "lucide-react";
+import { Users, GraduationCap, CalendarClock } from "lucide-react";
 
 import { getAdminDashboard } from "@/lib/queries/dashboard";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { SessionStatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPeriod, formatRupiah } from "@/lib/utils";
 
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboard();
@@ -17,7 +16,7 @@ export default async function AdminDashboardPage() {
         description="Ringkasan sekolah musik hari ini."
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           title="Total Murid Aktif"
           value={data.totalActiveStudents}
@@ -33,16 +32,10 @@ export default async function AdminDashboardPage() {
           value={data.todaySessions.length}
           icon={CalendarClock}
         />
-        <StatCard
-          title="Payroll Bulan Ini"
-          value={formatRupiah(data.payrollSummary.totalAmount)}
-          subtitle={`${data.payrollSummary.count} payroll · ${formatPeriod(data.payrollSummary.periodMonth, data.payrollSummary.periodYear)}`}
-          icon={Wallet}
-        />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-4">
+        <Card>
           <CardHeader>
             <CardTitle>Jadwal Hari Ini</CardTitle>
           </CardHeader>
@@ -71,40 +64,6 @@ export default async function AdminDashboardPage() {
                 ))}
               </ul>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Ringkasan Payroll</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-2 text-sm">
-              <li className="flex items-center justify-between">
-                <span className="text-muted-foreground">Draft</span>
-                <span className="font-medium text-foreground">
-                  {data.payrollSummary.byStatus.DRAFT}
-                </span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="text-muted-foreground">Disetujui</span>
-                <span className="font-medium text-foreground">
-                  {data.payrollSummary.byStatus.APPROVED}
-                </span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="text-muted-foreground">Dibayar</span>
-                <span className="font-medium text-foreground">
-                  {data.payrollSummary.byStatus.PAID}
-                </span>
-              </li>
-              <li className="flex items-center justify-between border-t border-border pt-2">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-semibold text-foreground">
-                  {formatRupiah(data.payrollSummary.totalAmount)}
-                </span>
-              </li>
-            </ul>
           </CardContent>
         </Card>
       </div>

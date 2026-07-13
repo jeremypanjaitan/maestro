@@ -8,8 +8,6 @@ import { createSchedule, updateSchedule } from "@/lib/actions/schedule";
 import { DAY_LABELS } from "@/lib/validations/schedule";
 import { INSTRUMENTS } from "@/lib/validations/student";
 import { CLASS_TYPE_LABELS } from "@/lib/domain/constants";
-import { perSessionRate } from "@/lib/domain/rate";
-import { formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -56,6 +54,11 @@ type ScheduleFormProps = {
   students: ScheduleStudentOption[];
 };
 
+// packagePrice/packageSessions are intentionally NOT exposed as form inputs
+// (tarif UI is hidden — see `.superpowers/sdd/hide-tarif.md`), but they're
+// kept in form state so an edit re-submits the schedule's EXISTING price
+// unchanged instead of wiping it out. New schedules are created with
+// packagePrice 0 / packageSessions 1 (rate resolves to 0).
 const EMPTY_FORM = {
   teacherId: "",
   studentId: "",
@@ -64,8 +67,8 @@ const EMPTY_FORM = {
   startTime: "",
   durationMinutes: "60",
   classType: "PRIVATE" as ClassType,
-  packagePrice: "",
-  packageSessions: "",
+  packagePrice: "0",
+  packageSessions: "1",
 };
 
 export function ScheduleForm({
@@ -140,16 +143,6 @@ export function ScheduleForm({
       toast.error(result.error);
     }
   }
-
-  const parsedPackagePrice = Number(form.packagePrice);
-  const parsedPackageSessions = Number(form.packageSessions);
-  const computedRate =
-    form.packagePrice !== "" &&
-    form.packageSessions !== "" &&
-    Number.isFinite(parsedPackagePrice) &&
-    Number.isFinite(parsedPackageSessions)
-      ? perSessionRate(parsedPackagePrice, parsedPackageSessions)
-      : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,44 +231,6 @@ export function ScheduleForm({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="packagePrice">Harga paket (Rp)</Label>
-              <Input
-                id="packagePrice"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={form.packagePrice}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, packagePrice: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="packageSessions">Jumlah sesi per paket</Label>
-              <Input
-                id="packageSessions"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={form.packageSessions}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, packageSessions: e.target.value }))
-                }
-                required
-              />
-            </div>
-          </div>
-          <p className="-mt-2 text-xs text-muted-foreground">
-            {computedRate != null
-              ? `Per sesi: ${formatRupiah(computedRate)}`
-              : "Isi harga paket dan jumlah sesi untuk melihat tarif per sesi."}
-          </p>
 
           <div className="grid gap-2">
             <Label>Hari</Label>

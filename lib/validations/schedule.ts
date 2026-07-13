@@ -42,7 +42,7 @@ const classType = z.enum(["PRIVATE", "GROUP"], { error: "Tipe kelas wajib diisi"
 const packagePrice = z.coerce
   .number({ error: "Harga paket wajib diisi" })
   .int("Harga paket harus bilangan bulat")
-  .min(1, "Harga paket harus lebih dari 0");
+  .min(0, "Harga paket tidak valid");
 
 /** Number of sessions included in the package (e.g. 4). */
 const packageSessions = z.coerce

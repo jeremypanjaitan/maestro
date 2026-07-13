@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { cancelSession, updateSessionStatus } from "@/lib/actions/session";
 import { DAY_LABELS } from "@/lib/validations/schedule";
 import { SESSION_STATUS_LABELS } from "@/lib/domain/constants";
-import { formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClassTypeBadge, SessionStatusBadge } from "@/components/status-badge";
@@ -220,7 +219,6 @@ export function SessionsTable({
                   <TableHead>Murid</TableHead>
                   <TableHead>Instrumen</TableHead>
                   <TableHead>Tipe</TableHead>
-                  <TableHead className="text-right">Tarif</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -228,7 +226,7 @@ export function SessionsTable({
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground">
                       Belum ada sesi untuk filter ini.
                     </TableCell>
                   </TableRow>
@@ -244,7 +242,6 @@ export function SessionsTable({
                       <TableCell>
                         <ClassTypeBadge classType={session.classType} />
                       </TableCell>
-                      <TableCell className="text-right">{formatRupiah(session.rate)}</TableCell>
                       <TableCell>
                         <SessionStatusBadge status={session.status} />
                       </TableCell>

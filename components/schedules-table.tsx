@@ -6,8 +6,6 @@ import { toast } from "sonner";
 
 import { toggleSchedule } from "@/lib/actions/schedule";
 import { DAY_LABELS } from "@/lib/validations/schedule";
-import { perSessionRate } from "@/lib/domain/rate";
-import { formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ClassTypeBadge } from "@/components/status-badge";
@@ -110,7 +108,6 @@ export function SchedulesTable({ schedules, teachers, students }: SchedulesTable
                   <TableHead>Jam</TableHead>
                   <TableHead>Durasi</TableHead>
                   <TableHead>Tipe</TableHead>
-                  <TableHead className="text-right">Paket</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -118,7 +115,7 @@ export function SchedulesTable({ schedules, teachers, students }: SchedulesTable
               <TableBody>
                 {schedules.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground">
                       Belum ada jadwal.
                     </TableCell>
                   </TableRow>
@@ -133,19 +130,6 @@ export function SchedulesTable({ schedules, teachers, students }: SchedulesTable
                       <TableCell>{schedule.durationMinutes} menit</TableCell>
                       <TableCell>
                         <ClassTypeBadge classType={schedule.classType} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-col text-sm">
-                          <span>
-                            {formatRupiah(schedule.packagePrice)} / {schedule.packageSessions} sesi
-                          </span>
-                          <span className="text-muted-foreground">
-                            {formatRupiah(
-                              perSessionRate(schedule.packagePrice, schedule.packageSessions),
-                            )}
-                            /sesi
-                          </span>
-                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={schedule.active ? "default" : "outline"}>

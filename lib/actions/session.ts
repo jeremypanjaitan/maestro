@@ -362,7 +362,7 @@ export async function createAdHocSession(
   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
     return { ok: false, error: "Durasi tidak valid" };
   }
-  if (!Number.isFinite(packagePrice) || packagePrice < 1) {
+  if (!Number.isFinite(packagePrice) || packagePrice < 0) {
     return { ok: false, error: "Harga paket tidak valid" };
   }
   if (!Number.isFinite(packageSessions) || packageSessions < 1) {
@@ -469,7 +469,7 @@ export async function updateSession(
   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
     return { ok: false, error: "Durasi tidak valid" };
   }
-  if (!Number.isFinite(packagePrice) || packagePrice < 1) {
+  if (!Number.isFinite(packagePrice) || packagePrice < 0) {
     return { ok: false, error: "Harga paket tidak valid" };
   }
   if (!Number.isFinite(packageSessions) || packageSessions < 1) {

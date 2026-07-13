@@ -8,8 +8,6 @@ import type { ClassType } from "@prisma/client";
 
 import { createAdHocSession } from "@/lib/actions/session";
 import { CLASS_TYPE_LABELS } from "@/lib/domain/constants";
-import { perSessionRate } from "@/lib/domain/rate";
-import { formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,8 +35,6 @@ const EMPTY = {
   teacherId: "",
   studentId: "",
   classType: "PRIVATE" as ClassType,
-  packagePrice: "",
-  packageSessions: "",
   dateISO: "",
   startTime: "",
   durationMinutes: "60",
@@ -46,8 +42,12 @@ const EMPTY = {
 
 /**
  * Create a single session directly (ad-hoc), without first making a weekly
- * Schedule and generating from it. Rate is derived from the package
- * (harga paket / jumlah sesi).
+ * Schedule and generating from it.
+ *
+ * Pricing UI is hidden (tarif/payroll feature hidden from the UI, see
+ * `.superpowers/sdd/hide-tarif.md`) — every ad-hoc session is submitted with
+ * `packagePrice: 0, packageSessions: 1`, so `rate` resolves to 0. The
+ * underlying package-price fields/logic are untouched server-side.
  */
 export function AddSessionDialog({
   teachers,
@@ -61,11 +61,6 @@ export function AddSessionDialog({
   const [form, setForm] = useState(EMPTY);
   const [isPending, setIsPending] = useState(false);
 
-  const price = Number(form.packagePrice);
-  const sessions = Number(form.packageSessions);
-  const perSession =
-    price >= 1 && sessions >= 1 ? perSessionRate(price, sessions) : null;
-
   function set<K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -77,8 +72,8 @@ export function AddSessionDialog({
       teacherId: form.teacherId,
       studentId: form.studentId,
       classType: form.classType,
-      packagePrice: form.packagePrice,
-      packageSessions: form.packageSessions,
+      packagePrice: 0,
+      packageSessions: 1,
       dateISO: form.dateISO,
       startTime: form.startTime,
       durationMinutes: form.durationMinutes,
@@ -161,40 +156,6 @@ export function AddSessionDialog({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="s-price">Harga paket (Rp)</Label>
-              <Input
-                id="s-price"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={form.packagePrice}
-                onChange={(e) => set("packagePrice", e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-sessions">Jumlah sesi per paket</Label>
-              <Input
-                id="s-sessions"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={form.packageSessions}
-                onChange={(e) => set("packageSessions", e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {perSession !== null
-              ? `Per sesi: ${formatRupiah(perSession)}`
-              : "Isi harga paket dan jumlah sesi untuk melihat tarif per sesi."}
-          </p>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
