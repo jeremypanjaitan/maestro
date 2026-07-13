@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { toDbDate, formatDbDate } from "@/lib/domain/dbDate";
 import { GenerateSessionsDialog } from "@/components/generate-sessions-dialog";
 import { AddSessionDialog } from "@/components/add-session-dialog";
 import { PageHeader } from "@/components/page-header";
 import { SessionsTable, type SessionRecord } from "@/components/sessions-table";
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 function startOfCurrentMonthUTC(): Date {
   const now = new Date();
@@ -14,11 +17,21 @@ function endOfCurrentMonthUTC(): Date {
   return new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0));
 }
 
-export default async function AdminSessionsPage() {
+export default async function AdminSessionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
+  const sp = await searchParams;
+  // Date range drives the DB query (default: current month). Lets ad-hoc
+  // sessions on any date be found by setting Dari/Sampai.
+  const fromISO = sp.from && YMD.test(sp.from) ? sp.from : formatDbDate(startOfCurrentMonthUTC());
+  const toISO = sp.to && YMD.test(sp.to) ? sp.to : formatDbDate(endOfCurrentMonthUTC());
+
   const [sessions, teachers, students] = await Promise.all([
     prisma.session.findMany({
       where: {
-        date: { gte: startOfCurrentMonthUTC(), lte: endOfCurrentMonthUTC() },
+        date: { gte: toDbDate(fromISO), lte: toDbDate(toISO) },
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
       include: {
@@ -56,13 +69,18 @@ export default async function AdminSessionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Kelola Sesi"
-        description="Sesi bulan berjalan yang dibuat dari jadwal aktif."
+        description="Atur rentang tanggal (Dari/Sampai) untuk melihat sesi periode lain."
       >
         <AddSessionDialog teachers={teachers} students={students} />
         <GenerateSessionsDialog />
       </PageHeader>
 
-      <SessionsTable sessions={sessionRecords} teachers={teachers} />
+      <SessionsTable
+        sessions={sessionRecords}
+        teachers={teachers}
+        initialFrom={fromISO}
+        initialTo={toISO}
+      />
     </div>
   );
 }

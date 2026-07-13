@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ClassType, SessionStatus } from "@prisma/client";
 import { FileText, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +65,10 @@ export type SessionRecord = {
 type SessionsTableProps = {
   sessions: SessionRecord[];
   teachers: SessionTeacherOption[];
+  /** Active date range (YYYY-MM-DD) that the server used for this query.
+   * The Dari/Sampai inputs drive it via the URL so any month is reachable. */
+  initialFrom: string;
+  initialTo: string;
 };
 
 /** Statuses settable from this table's row menu (RESCHEDULE excluded — that
@@ -84,24 +89,33 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
+export function SessionsTable({
+  sessions,
+  teachers,
+  initialFrom,
+  initialTo,
+}: SessionsTableProps) {
+  const router = useRouter();
   const [teacherFilter, setTeacherFilter] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
-  const [fromFilter, setFromFilter] = useState<string>("");
-  const [toFilter, setToFilter] = useState<string>("");
+  // Date range is server-driven (via the URL) so ANY month is reachable, not
+  // just the sessions already loaded. Teacher/status stay client-side.
+  const [fromFilter, setFromFilter] = useState<string>(initialFrom);
+  const [toFilter, setToFilter] = useState<string>(initialTo);
   const [cancelTarget, setCancelTarget] = useState<SessionRecord | null>(null);
   const [isPending, setIsPending] = useState(false);
+
+  function applyRange(from: string, to: string) {
+    router.push(`/admin/sessions?from=${from}&to=${to}`);
+  }
 
   const filtered = useMemo(() => {
     return sessions.filter((session) => {
       if (teacherFilter !== ALL && session.teacher.id !== teacherFilter) return false;
       if (statusFilter !== ALL && session.status !== statusFilter) return false;
-      const dateStr = formatDate(session.date);
-      if (fromFilter && dateStr < fromFilter) return false;
-      if (toFilter && dateStr > toFilter) return false;
       return true;
     });
-  }, [sessions, teacherFilter, statusFilter, fromFilter, toFilter]);
+  }, [sessions, teacherFilter, statusFilter]);
 
   async function handleStatusChange(session: SessionRecord, status: SessionStatus) {
     setIsPending(true);
@@ -171,7 +185,10 @@ export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
           <input
             type="date"
             value={fromFilter}
-            onChange={(e) => setFromFilter(e.target.value)}
+            onChange={(e) => {
+              setFromFilter(e.target.value);
+              if (e.target.value) applyRange(e.target.value, toFilter);
+            }}
             className="h-9 rounded-md border bg-transparent px-3 text-sm"
           />
         </div>
@@ -180,7 +197,10 @@ export function SessionsTable({ sessions, teachers }: SessionsTableProps) {
           <input
             type="date"
             value={toFilter}
-            onChange={(e) => setToFilter(e.target.value)}
+            onChange={(e) => {
+              setToFilter(e.target.value);
+              if (e.target.value) applyRange(fromFilter, e.target.value);
+            }}
             className="h-9 rounded-md border bg-transparent px-3 text-sm"
           />
         </div>
