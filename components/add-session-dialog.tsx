@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -52,14 +52,43 @@ const EMPTY = {
 export function AddSessionDialog({
   teachers,
   students,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+  defaultDate,
+  showTrigger = true,
 }: {
   teachers: Option[];
   students: Option[];
+  /** Controlled open state. When provided together with `onOpenChange`, the
+   * parent owns the dialog's open/closed state (used e.g. from the admin
+   * calendar's per-day "+" quick-add). Omit for the default self-contained
+   * (uncontrolled) usage with its own trigger button. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** "YYYY-MM-DD" date to prefill when the dialog opens (controlled mode). */
+  defaultDate?: string;
+  /** Whether to render the built-in "Tambah Sesi" trigger button. Ignored
+   * (never rendered) when the dialog is controlled by the parent. Defaults
+   * to true. */
+  showTrigger?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const isControlled = openProp !== undefined && onOpenChangeProp !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? openProp : internalOpen;
+  const setOpen = isControlled ? onOpenChangeProp : setInternalOpen;
+
   const [form, setForm] = useState(EMPTY);
   const [isPending, setIsPending] = useState(false);
+
+  // Re-initialize the form (with the prefilled date, if any) every time the
+  // dialog transitions to open — covers both the uncontrolled trigger click
+  // and the controlled parent flipping `open` to true directly.
+  useEffect(() => {
+    if (open) {
+      setForm({ ...EMPTY, dateISO: defaultDate ?? "" });
+    }
+  }, [open, defaultDate]);
 
   function set<K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -91,12 +120,14 @@ export function AddSessionDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">
-          <Plus className="size-4" />
-          Tambah Sesi
-        </Button>
-      </DialogTrigger>
+      {showTrigger && !isControlled ? (
+        <DialogTrigger asChild>
+          <Button variant="outline">
+            <Plus className="size-4" />
+            Tambah Sesi
+          </Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Tambah Sesi</DialogTitle>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import type { SessionStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,10 @@ type ScheduleCalendarProps = {
   nextWeekHref: string;
   currentWeekHref: string;
   isCurrentWeek: boolean;
+  /** When provided, shows a "+" quick-add button in each day cell header
+   * that calls back with that cell's "YYYY-MM-DD" date. Omitted on the guru
+   * calendar, which renders read-only. */
+  onAddSession?: (date: string) => void;
 };
 
 const DAY_NAMES = [
@@ -95,6 +100,7 @@ export function ScheduleCalendar({
   nextWeekHref,
   currentWeekHref,
   isCurrentWeek,
+  onAddSession,
 }: ScheduleCalendarProps) {
   const weekDates = buildWeekDates(weekStart);
 
@@ -137,13 +143,26 @@ export function ScheduleCalendar({
                 key={date}
                 className="flex flex-col gap-2 rounded-lg border border-border p-3"
               >
-                <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline justify-between gap-1">
                   <span className="text-sm font-semibold text-foreground">
                     {DAY_NAMES[index]}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {day} {MONTH_NAMES[month]}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">
+                      {day} {MONTH_NAMES[month]}
+                    </span>
+                    {onAddSession ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Tambah sesi ${day} ${MONTH_NAMES[month]}`}
+                        onClick={() => onAddSession(date)}
+                      >
+                        <Plus className="size-3.5" />
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
                 {daySessions.length === 0 ? (

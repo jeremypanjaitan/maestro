@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getCalendarSessions } from "@/lib/queries/calendar";
 import { addDays, getWeekStart, todayISO } from "@/lib/domain/week";
 import { PageHeader } from "@/components/page-header";
-import { ScheduleCalendar } from "@/components/schedule-calendar";
+import { AdminCalendar } from "@/components/admin-calendar";
 import { CalendarFilters } from "@/components/calendar-filters";
 
 type AdminCalendarPageProps = {
@@ -62,9 +62,10 @@ export default async function AdminScheduleCalendarPage({
         studentId={studentId}
       />
 
-      <ScheduleCalendar
+      <AdminCalendar
         sessions={sessions}
-        viewMode="admin"
+        teachers={teachers}
+        students={students}
         weekStart={weekStart}
         weekEnd={weekEnd}
         prevWeekHref={weekHref(addDays(weekStart, -7))}
