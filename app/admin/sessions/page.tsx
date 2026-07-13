@@ -61,6 +61,8 @@ export default async function AdminSessionsPage({
     instrument: session.schedule?.instrument ?? session.student.instrument,
     classType: session.classType,
     rate: session.rate,
+    packagePrice: session.packagePrice,
+    packageSessions: session.packageSessions,
     teacher: session.teacher,
     student: { id: session.student.id, name: session.student.name },
   }));

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ClassType, SessionStatus } from "@prisma/client";
-import { FileText, MoreHorizontal } from "lucide-react";
+import { FileText, MoreHorizontal, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { cancelSession, updateSessionStatus } from "@/lib/actions/session";
@@ -14,6 +14,7 @@ import { formatRupiah } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClassTypeBadge, SessionStatusBadge } from "@/components/status-badge";
+import { EditSessionDialog } from "@/components/edit-session-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +59,8 @@ export type SessionRecord = {
   instrument: string;
   classType: ClassType;
   rate: number;
+  packagePrice: number;
+  packageSessions: number;
   teacher: { id: string; name: string };
   student: { id: string; name: string };
 };
@@ -106,6 +109,7 @@ export function SessionsTable({
   const [fromFilter, setFromFilter] = useState<string>(initialFrom);
   const [toFilter, setToFilter] = useState<string>(initialTo);
   const [cancelTarget, setCancelTarget] = useState<SessionRecord | null>(null);
+  const [editTarget, setEditTarget] = useState<SessionRecord | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   function applyRange(from: string, to: string) {
@@ -283,6 +287,10 @@ export function SessionsTable({
                                 Lihat Laporan
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setEditTarget(session)}>
+                              <Pencil />
+                              Edit
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {ASSIGNABLE_STATUSES.map((status) => (
                               <DropdownMenuItem
@@ -335,6 +343,16 @@ export function SessionsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EditSessionDialog
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+        session={editTarget}
+        teachers={teachers}
+        students={students}
+      />
     </div>
   );
 }

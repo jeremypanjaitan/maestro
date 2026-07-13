@@ -421,3 +421,116 @@ export async function createAdHocSession(
   revalidatePath("/guru/sessions");
   return { ok: true };
 }
+
+/**
+ * Edits an existing session's teacher/student/classType/package/date/time
+ * /duration. Reuses the same validation and group-aware conflict check as
+ * `createAdHocSession`. Rate is recomputed from the (possibly new)
+ * package price/sessions — never trusted from the client directly.
+ *
+ * MONEY INTEGRITY: refuses to edit a session that's already part of a PAID
+ * payroll (checked via `PayrollItem.sessionId`'s unique relation) — that
+ * would silently change a figure the teacher has already been paid for.
+ */
+export async function updateSession(
+  sessionId: string,
+  input: AdHocSessionInput,
+): Promise<SessionActionResult> {
+  const guard = await requireAdmin();
+  if (guard) return guard;
+
+  const existing = await prisma.session.findUnique({ where: { id: sessionId } });
+  if (!existing) {
+    return { ok: false, error: "Sesi tidak ditemukan" };
+  }
+
+  const payrollItem = await prisma.payrollItem.findUnique({
+    where: { sessionId },
+    include: { payroll: true },
+  });
+  if (payrollItem && payrollItem.payroll.status === "PAID") {
+    return {
+      ok: false,
+      error: "Sesi ini sudah dibayar (payroll PAID) dan tidak bisa diedit",
+    };
+  }
+
+  const { teacherId, studentId, dateISO, startTime, classType } = input;
+  const durationMinutes = Number(input.durationMinutes);
+  const packagePrice = Number(input.packagePrice);
+  const packageSessions = Number(input.packageSessions);
+
+  if (!teacherId || !studentId) {
+    return { ok: false, error: "Guru dan murid wajib dipilih" };
+  }
+  if (!isValidCalendarDate(dateISO) || !isValidClockTime(startTime)) {
+    return { ok: false, error: "Tanggal atau jam tidak valid" };
+  }
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    return { ok: false, error: "Durasi tidak valid" };
+  }
+  if (!Number.isFinite(packagePrice) || packagePrice < 1) {
+    return { ok: false, error: "Harga paket tidak valid" };
+  }
+  if (!Number.isFinite(packageSessions) || packageSessions < 1) {
+    return { ok: false, error: "Jumlah sesi per paket tidak valid" };
+  }
+  if (classType !== "PRIVATE" && classType !== "GROUP") {
+    return { ok: false, error: "Tipe kelas tidak valid" };
+  }
+
+  const date = toDbDate(dateISO);
+  const sameDaySessions = await prisma.session.findMany({
+    where: {
+      date,
+      status: { notIn: ["CANCEL", "RESCHEDULE"] },
+      id: { not: sessionId },
+    },
+    select: {
+      teacherId: true,
+      studentId: true,
+      startTime: true,
+      durationMinutes: true,
+      classType: true,
+    },
+  });
+  const candidate: Slot = {
+    teacherId,
+    studentId,
+    startTime,
+    durationMinutes,
+    classType,
+  };
+  if (hasConflict(candidate, sameDaySessions)) {
+    return {
+      ok: false,
+      error: "Sesi bentrok dengan sesi lain (guru atau murid sudah terpakai di jam itu)",
+    };
+  }
+
+  try {
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        teacherId,
+        studentId,
+        date,
+        startTime,
+        durationMinutes,
+        classType,
+        packagePrice,
+        packageSessions,
+        rate: perSessionRate(packagePrice, packageSessions),
+      },
+    });
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return { ok: false, error: "Sesi tidak ditemukan" };
+    }
+    return { ok: false, error: "Gagal memperbarui sesi (guru/murid tidak valid)" };
+  }
+
+  revalidatePath("/admin/sessions");
+  revalidatePath("/guru/sessions");
+  return { ok: true };
+}
