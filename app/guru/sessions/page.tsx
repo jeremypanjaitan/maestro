@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { getGuruSessions } from "@/lib/queries/calendar";
-import { formatRupiah } from "@/lib/utils";
 import { AttendanceControls } from "@/components/attendance-controls";
 import { PageHeader } from "@/components/page-header";
 import { RescheduleDialog } from "@/components/reschedule-dialog";
@@ -40,7 +39,6 @@ export default async function GuruSessionsPage() {
                   <TableHead>Murid</TableHead>
                   <TableHead>Instrumen</TableHead>
                   <TableHead>Tipe</TableHead>
-                  <TableHead className="text-right">Tarif</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -48,7 +46,7 @@ export default async function GuruSessionsPage() {
               <TableBody>
                 {sessions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       Belum ada sesi pada rentang ini.
                     </TableCell>
                   </TableRow>
@@ -64,7 +62,6 @@ export default async function GuruSessionsPage() {
                         <TableCell>
                           <ClassTypeBadge classType={session.classType} />
                         </TableCell>
-                        <TableCell className="text-right">{formatRupiah(session.rate)}</TableCell>
                         <TableCell>
                           <AttendanceControls sessionId={session.id} status={session.status} />
                         </TableCell>
