@@ -65,6 +65,7 @@ export type SessionRecord = {
 type SessionsTableProps = {
   sessions: SessionRecord[];
   teachers: SessionTeacherOption[];
+  students: { id: string; name: string }[];
   /** Active date range (YYYY-MM-DD) that the server used for this query.
    * The Dari/Sampai inputs drive it via the URL so any month is reachable. */
   initialFrom: string;
@@ -92,11 +93,13 @@ function formatDate(date: Date): string {
 export function SessionsTable({
   sessions,
   teachers,
+  students,
   initialFrom,
   initialTo,
 }: SessionsTableProps) {
   const router = useRouter();
   const [teacherFilter, setTeacherFilter] = useState<string>(ALL);
+  const [studentFilter, setStudentFilter] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
   // Date range is server-driven (via the URL) so ANY month is reachable, not
   // just the sessions already loaded. Teacher/status stay client-side.
@@ -112,10 +115,11 @@ export function SessionsTable({
   const filtered = useMemo(() => {
     return sessions.filter((session) => {
       if (teacherFilter !== ALL && session.teacher.id !== teacherFilter) return false;
+      if (studentFilter !== ALL && session.student.id !== studentFilter) return false;
       if (statusFilter !== ALL && session.status !== statusFilter) return false;
       return true;
     });
-  }, [sessions, teacherFilter, statusFilter]);
+  }, [sessions, teacherFilter, studentFilter, statusFilter]);
 
   async function handleStatusChange(session: SessionRecord, status: SessionStatus) {
     setIsPending(true);
@@ -157,6 +161,23 @@ export function SessionsTable({
               {teachers.map((teacher) => (
                 <SelectItem key={teacher.id} value={teacher.id}>
                   {teacher.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">Murid</span>
+          <Select value={studentFilter} onValueChange={setStudentFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Semua murid</SelectItem>
+              {students.map((student) => (
+                <SelectItem key={student.id} value={student.id}>
+                  {student.name}
                 </SelectItem>
               ))}
             </SelectContent>

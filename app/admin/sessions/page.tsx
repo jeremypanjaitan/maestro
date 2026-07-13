@@ -78,6 +78,7 @@ export default async function AdminSessionsPage({
       <SessionsTable
         sessions={sessionRecords}
         teachers={teachers}
+        students={students}
         initialFrom={fromISO}
         initialTo={toISO}
       />
