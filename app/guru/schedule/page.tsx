@@ -28,7 +28,7 @@ export default async function GuruSchedulePage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Jadwal Saya"
+        title="Kalender Saya"
         description="Tampilan mingguan sesi mengajar Anda."
       />
 

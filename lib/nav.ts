@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  CalendarDays,
   CalendarRange,
   ClipboardList,
   History,
@@ -26,7 +25,6 @@ export const adminNav: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Guru", href: "/admin/teachers", icon: GraduationCap },
   { label: "Murid", href: "/admin/students", icon: Users },
-  { label: "Jadwal", href: "/admin/schedules", icon: CalendarDays },
   { label: "Kalender", href: "/admin/schedules/calendar", icon: CalendarRange },
   { label: "Sesi", href: "/admin/sessions", icon: ClipboardList },
   { label: "Pembayaran Honor", href: "/admin/honor", icon: Wallet },
@@ -35,7 +33,7 @@ export const adminNav: NavItem[] = [
 
 export const guruNav: NavItem[] = [
   { label: "Dashboard", href: "/guru/dashboard", icon: LayoutDashboard },
-  { label: "Jadwal", href: "/guru/schedule", icon: CalendarDays },
+  { label: "Kalender", href: "/guru/schedule", icon: CalendarRange },
   { label: "Sesi & Absensi", href: "/guru/sessions", icon: ClipboardList },
   { label: "Pembayaran Honor", href: "/guru/honor", icon: Wallet },
   { label: "Riwayat", href: "/guru/reports/history", icon: History },

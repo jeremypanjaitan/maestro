@@ -10,6 +10,7 @@ export type HonorSessionRow = {
   id: string;
   dateStr: string;
   startTime: string;
+  studentId: string;
   studentName: string;
   classType: ClassType;
   status: SessionStatus;
@@ -48,7 +49,7 @@ async function loadSessionRows(teacherId: string): Promise<HonorSessionRow[]> {
       classType: true,
       status: true,
       rate: true,
-      student: { select: { name: true } },
+      student: { select: { id: true, name: true } },
       honorPaymentItem: { select: { honorPaymentId: true } },
     },
   });
@@ -57,6 +58,7 @@ async function loadSessionRows(teacherId: string): Promise<HonorSessionRow[]> {
     id: s.id,
     dateStr: formatDbDate(s.date),
     startTime: s.startTime,
+    studentId: s.student.id,
     studentName: s.student.name,
     classType: s.classType,
     status: s.status,
