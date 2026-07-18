@@ -125,6 +125,42 @@ export function buildDataUrl(mimeType: string, dataBase64: string): string {
 }
 
 /**
+ * Honor-payment proof files. Unlike lesson-report attachments, proofs accept
+ * PDF (a transfer receipt is often a PDF) in addition to images, and never
+ * accept video/audio. SVG is still rejected (same script-injection reasoning
+ * as `mimeTypeToAttachmentType`). Cap is a single 5MB limit for both kinds.
+ */
+export const PROOF_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/** True if `mimeType` is an accepted honor-payment proof kind (image — not
+ * SVG — or PDF). Used client-side (pre-flight) and server-side (authoritative,
+ * re-derived from the normalized mime, never trusting the client). */
+export function isAcceptedProofMime(mimeType: string): boolean {
+  const m = normalizeMimeType(mimeType);
+  if (m === "image/svg+xml" || m.startsWith("image/svg")) return false;
+  return m.startsWith("image/") || m === "application/pdf";
+}
+
+export type ProofValidationResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/** Client-side pre-flight for a proof `File`: accepted kind + under the size
+ * cap. Advisory only — `createHonorPayment` re-checks both on the server. */
+export function validateProofFile(file: File): ProofValidationResult {
+  if (!isAcceptedProofMime(file.type)) {
+    return { ok: false, error: "Bukti harus berupa gambar atau PDF" };
+  }
+  if (file.size > PROOF_MAX_BYTES) {
+    return {
+      ok: false,
+      error: `Ukuran bukti maksimum ${Math.round(PROOF_MAX_BYTES / (1024 * 1024))}MB`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
  * Compresses an image `File` client-side when it's over 2MB, so large
  * phone-camera photos (3-5MB is common) have a chance to pass the PHOTO
  * `PHOTO_MAX_BYTES` server check instead of being rejected outright.

@@ -1,7 +1,8 @@
 import Link from "next/link";
 
-import { getGuruSessions } from "@/lib/queries/calendar";
+import { getGuruSessions, getStudentsForGuru } from "@/lib/queries/calendar";
 import { AttendanceControls } from "@/components/attendance-controls";
+import { GuruAddSessionDialog } from "@/components/guru-add-session-dialog";
 import { PageHeader } from "@/components/page-header";
 import { RescheduleDialog } from "@/components/reschedule-dialog";
 import { ClassTypeBadge } from "@/components/status-badge";
@@ -19,14 +20,19 @@ import {
 export default async function GuruSessionsPage() {
   // Scoping to the signed-in guru's own teacherId happens inside
   // getGuruSessions -> getCalendarSessions, re-derived from auth() there.
-  const sessions = await getGuruSessions();
+  const [sessions, students] = await Promise.all([
+    getGuruSessions(),
+    getStudentsForGuru(),
+  ]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Sesi & Absensi"
         description="Tandai kehadiran dan kelola laporan untuk sesi Anda."
-      />
+      >
+        <GuruAddSessionDialog students={students} />
+      </PageHeader>
 
       <Card>
         <CardContent className="p-0">

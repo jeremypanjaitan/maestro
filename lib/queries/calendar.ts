@@ -106,3 +106,33 @@ export async function getGuruSessions(): Promise<CalendarSession[]> {
   const today = todayISO();
   return getCalendarSessions({ from: addDays(today, -14), to: addDays(today, 30) });
 }
+
+/**
+ * The signed-in guru's own students: those linked to them via a schedule or a
+ * prior session. Used to populate the guru "Tambah Sesi" dialog. teacherId is
+ * re-derived from `auth()`, never trusted from the caller. Returns an empty
+ * list for non-guru callers or a guru not linked to a Teacher record.
+ *
+ * NOTE: this is the read-side mirror of the ownership check enforced by
+ * `createGuruSession` — keep the "schedule OR session" link rule in sync.
+ */
+export async function getStudentsForGuru(): Promise<{ id: string; name: string }[]> {
+  const session = await auth();
+  const teacherId = session?.user?.teacherId;
+  if (session?.user?.role !== "GURU" || !teacherId) {
+    return [];
+  }
+
+  const students = await prisma.student.findMany({
+    where: {
+      status: "ACTIVE",
+      OR: [
+        { schedules: { some: { teacherId } } },
+        { sessions: { some: { teacherId } } },
+      ],
+    },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+  return students;
+}

@@ -422,6 +422,119 @@ export async function createAdHocSession(
   return { ok: true };
 }
 
+export type GuruSessionInput = {
+  studentId: string;
+  dateISO: string;
+  startTime: string;
+  durationMinutes: number | string;
+  classType: "PRIVATE" | "GROUP";
+};
+
+/**
+ * Lets a GURU create a single one-off session for one of THEIR OWN students,
+ * directly active (SCHEDULED). Distinct from `createAdHocSession` (admin-only):
+ *
+ * SECURITY: `teacherId` is re-derived from `auth()`, never taken from the
+ * client — a guru can only ever create sessions for themselves. The student
+ * must already be linked to this guru (have a schedule or prior session with
+ * them); an arbitrary studentId is rejected.
+ *
+ * No pricing input: pricing UI is hidden from guru, so the session is created
+ * with `packagePrice: 0, packageSessions: 1` (rate resolves to 0). The admin
+ * sets the actual honor amount later via the Pembayaran Honor flow.
+ */
+export async function createGuruSession(
+  input: GuruSessionInput,
+): Promise<SessionActionResult> {
+  const authSession = await auth();
+  if (authSession?.user?.role !== "GURU" || !authSession.user.teacherId) {
+    return { ok: false, error: "Tidak diizinkan" };
+  }
+  const teacherId = authSession.user.teacherId;
+
+  const { studentId, dateISO, startTime, classType } = input;
+  const durationMinutes = Number(input.durationMinutes);
+
+  if (!studentId) {
+    return { ok: false, error: "Murid wajib dipilih" };
+  }
+  if (!isValidCalendarDate(dateISO) || !isValidClockTime(startTime)) {
+    return { ok: false, error: "Tanggal atau jam tidak valid" };
+  }
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    return { ok: false, error: "Durasi tidak valid" };
+  }
+  if (classType !== "PRIVATE" && classType !== "GROUP") {
+    return { ok: false, error: "Tipe kelas tidak valid" };
+  }
+
+  // The student must be one of this guru's own students: linked via a schedule
+  // or a prior session with this teacher. Guards against a guru creating a
+  // session for a student they don't teach.
+  const [scheduleLink, sessionLink] = await Promise.all([
+    prisma.schedule.findFirst({
+      where: { teacherId, studentId },
+      select: { id: true },
+    }),
+    prisma.session.findFirst({
+      where: { teacherId, studentId },
+      select: { id: true },
+    }),
+  ]);
+  if (!scheduleLink && !sessionLink) {
+    return { ok: false, error: "Murid bukan murid Anda" };
+  }
+
+  const date = toDbDate(dateISO);
+  const sameDaySessions = await prisma.session.findMany({
+    where: { date, status: { notIn: ["CANCEL", "RESCHEDULE"] } },
+    select: {
+      teacherId: true,
+      studentId: true,
+      startTime: true,
+      durationMinutes: true,
+      classType: true,
+    },
+  });
+  const candidate: Slot = {
+    teacherId,
+    studentId,
+    startTime,
+    durationMinutes,
+    classType,
+  };
+  if (hasConflict(candidate, sameDaySessions)) {
+    return {
+      ok: false,
+      error: "Sesi bentrok dengan sesi lain (Anda atau murid sudah terpakai di jam itu)",
+    };
+  }
+
+  try {
+    await prisma.session.create({
+      data: {
+        scheduleId: null,
+        teacherId,
+        studentId,
+        date,
+        startTime,
+        durationMinutes,
+        classType,
+        packagePrice: 0,
+        packageSessions: 1,
+        rate: 0,
+        status: "SCHEDULED",
+      },
+    });
+  } catch {
+    return { ok: false, error: "Gagal membuat sesi" };
+  }
+
+  revalidatePath("/guru/sessions");
+  revalidatePath("/admin/sessions");
+  return { ok: true };
+}
+
 /**
  * Edits an existing session's teacher/student/classType/package/date/time
  * /duration. Reuses the same validation and group-aware conflict check as

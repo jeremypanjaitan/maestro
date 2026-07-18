@@ -59,17 +59,18 @@ model User {
 }
 
 model Teacher {
-  id             String        @id @default(cuid())
+  id             String         @id @default(cuid())
   name           String
   instruments    String[]
   phone          String?
-  status         TeacherStatus @default(ACTIVE)
-  user           User?         @relation(fields: [userId], references: [id])
-  userId         String?       @unique
+  status         TeacherStatus  @default(ACTIVE)
+  user           User?          @relation(fields: [userId], references: [id])
+  userId         String?        @unique
   schedules      Schedule[]
   sessions       Session[]
   payrolls       Payroll[]
-  createdAt      DateTime      @default(now())
+  honorPayments  HonorPayment[]
+  createdAt      DateTime       @default(now())
 }
 
 model Student {
@@ -125,6 +126,7 @@ model Session {
   rescheduledFrom Session?      @relation("Reschedule")
   lessonReport    LessonReport?
   payrollItem     PayrollItem?
+  honorPaymentItem HonorPaymentItem?
   createdAt       DateTime      @default(now())
 
   @@index([teacherId, date])
@@ -179,4 +181,40 @@ model PayrollItem {
   session   Session @relation(fields: [sessionId], references: [id])
   sessionId String  @unique
   rate      Int
+}
+
+/// An honorarium payment to a teacher covering a flexible set of sessions,
+/// with a manually-entered total amount and one or more proof files. A
+/// session is considered "paid" iff it is referenced by a HonorPaymentItem.
+model HonorPayment {
+  id        String              @id @default(cuid())
+  teacher   Teacher             @relation(fields: [teacherId], references: [id])
+  teacherId String
+  amount    Int // total nominal honor (input manual)
+  paidAt    DateTime            @db.Date
+  note      String?
+  items     HonorPaymentItem[]
+  proofs    HonorPaymentProof[]
+  createdAt DateTime            @default(now())
+
+  @@index([teacherId])
+}
+
+model HonorPaymentItem {
+  id             String       @id @default(cuid())
+  honorPayment   HonorPayment @relation(fields: [honorPaymentId], references: [id], onDelete: Cascade)
+  honorPaymentId String
+  session        Session      @relation(fields: [sessionId], references: [id])
+  sessionId      String       @unique // 1 sesi hanya boleh masuk 1 pembayaran
+  rateSnapshot   Int // rate sesi saat dibayar (acuan; total tetap dari amount manual)
+}
+
+model HonorPaymentProof {
+  id             String       @id @default(cuid())
+  honorPayment   HonorPayment @relation(fields: [honorPaymentId], references: [id], onDelete: Cascade)
+  honorPaymentId String
+  filename       String
+  mimeType       String
+  dataBase64     String       @db.Text
+  createdAt      DateTime     @default(now())
 }
