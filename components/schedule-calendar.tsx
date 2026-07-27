@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
-import type { SessionStatus } from "@prisma/client";
+import { Pencil, Plus } from "lucide-react";
+import type { ClassType, SessionStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,10 @@ export type CalendarSession = {
   durationMinutes: number;
   status: SessionStatus;
   instrument: string;
+  classType: ClassType;
+  rate: number;
+  packagePrice: number;
+  packageSessions: number;
   teacher: { id: string; name: string };
   student: { id: string; name: string };
 };
@@ -34,6 +38,9 @@ type ScheduleCalendarProps = {
    * that calls back with that cell's "YYYY-MM-DD" date. Omitted on the guru
    * calendar, which renders read-only. */
   onAddSession?: (date: string) => void;
+  /** When provided, shows a pencil "edit" button on each session card that
+   * calls back with that session. Omitted on the guru calendar. */
+  onEditSession?: (session: CalendarSession) => void;
 };
 
 const DAY_NAMES = [
@@ -101,6 +108,7 @@ export function ScheduleCalendar({
   currentWeekHref,
   isCurrentWeek,
   onAddSession,
+  onEditSession,
 }: ScheduleCalendarProps) {
   const weekDates = buildWeekDates(weekStart);
   // Clicking a session opens its read-only report page, per role.
@@ -196,27 +204,47 @@ export function ScheduleCalendar({
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {group.items.map((session) => (
-                            <Link
+                            <div
                               key={session.id}
-                              href={`${reportBasePath}/${session.id}/report`}
-                              title="Lihat laporan"
-                              className="flex min-w-[7rem] flex-1 basis-32 flex-col gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs transition-colors hover:bg-muted"
+                              className="relative flex min-w-[7rem] flex-1 basis-32 flex-col gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs transition-colors hover:bg-muted"
                             >
-                              <div className="flex items-center justify-between gap-1">
+                              {/* Full-card overlay link opens the read-only
+                                  report; the edit button below sits above it
+                                  (z-10) so it stays independently clickable. */}
+                              <Link
+                                href={`${reportBasePath}/${session.id}/report`}
+                                title="Lihat laporan"
+                                aria-label={`Lihat laporan ${session.student.name}`}
+                                className="absolute inset-0 rounded-md"
+                              />
+                              <div className="relative flex items-center justify-between gap-1">
                                 <span className="font-medium text-foreground">
                                   {session.student.name}
                                 </span>
-                                <SessionStatusBadge status={session.status} />
+                                <div className="relative z-10 flex items-center gap-1">
+                                  <SessionStatusBadge status={session.status} />
+                                  {onEditSession ? (
+                                    <button
+                                      type="button"
+                                      aria-label="Edit sesi"
+                                      title="Edit sesi"
+                                      onClick={() => onEditSession(session)}
+                                      className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
+                                    >
+                                      <Pencil className="size-3" />
+                                    </button>
+                                  ) : null}
+                                </div>
                               </div>
                               {viewMode === "admin" ? (
-                                <span className="text-muted-foreground">
+                                <span className="relative text-muted-foreground">
                                   {session.teacher.name}
                                 </span>
                               ) : null}
-                              <span className="text-muted-foreground">
+                              <span className="relative text-muted-foreground">
                                 {session.instrument} &middot; {session.durationMinutes}m
                               </span>
-                            </Link>
+                            </div>
                           ))}
                         </div>
                       </div>

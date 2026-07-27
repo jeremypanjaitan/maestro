@@ -14,6 +14,8 @@ export type CalendarSession = {
   instrument: string;
   classType: ClassType;
   rate: number;
+  packagePrice: number;
+  packageSessions: number;
   teacher: { id: string; name: string };
   student: { id: string; name: string };
 };
@@ -90,6 +92,8 @@ export async function getCalendarSessions({
     instrument: s.schedule?.instrument ?? s.student.instrument,
     classType: s.classType,
     rate: s.rate,
+    packagePrice: s.packagePrice,
+    packageSessions: s.packageSessions,
     teacher: { id: s.teacher.id, name: s.teacher.name },
     student: { id: s.student.id, name: s.student.name },
   }));

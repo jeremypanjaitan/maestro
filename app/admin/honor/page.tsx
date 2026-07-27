@@ -27,6 +27,7 @@ export default async function AdminHonorPage({
       id: s.id,
       dateStr: s.dateStr,
       startTime: s.startTime,
+      studentId: s.studentId,
       studentName: s.studentName,
       status: s.status,
       rate: s.rate,
