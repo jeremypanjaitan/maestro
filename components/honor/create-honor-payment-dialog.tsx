@@ -13,6 +13,7 @@ import {
 } from "@/lib/files";
 import { formatRupiah } from "@/lib/utils";
 import { SessionStatusBadge } from "@/components/status-badge";
+import { MultiSelectFilter } from "@/components/multi-select-filter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -34,6 +35,7 @@ export type SelectableSession = {
   id: string;
   dateStr: string;
   startTime: string;
+  studentId: string;
   studentName: string;
   status: SessionStatus;
   rate: number;
@@ -67,6 +69,7 @@ export function CreateHonorPaymentDialog({
   const [open, setOpen] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [studentFilter, setStudentFilter] = useState<string[]>([]);
   const [amount, setAmount] = useState("");
   const [paidAtISO, setPaidAtISO] = useState("");
   const [note, setNote] = useState("");
@@ -78,6 +81,7 @@ export function CreateHonorPaymentDialog({
   useEffect(() => {
     if (open) {
       setSelected(new Set());
+      setStudentFilter([]);
       setAmount("");
       setPaidAtISO(todayLocalISO());
       setNote("");
@@ -91,6 +95,27 @@ export function CreateHonorPaymentDialog({
         .filter((s) => selected.has(s.id))
         .reduce((sum, s) => sum + s.rate, 0),
     [sessions, selected],
+  );
+
+  // Distinct students among the unpaid sessions, for the "Murid" filter.
+  const studentOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const s of sessions) {
+      if (!seen.has(s.studentId)) seen.set(s.studentId, s.studentName);
+    }
+    return Array.from(seen, ([value, label]) => ({ value, label })).sort(
+      (a, b) => a.label.localeCompare(b.label),
+    );
+  }, [sessions]);
+
+  // Sessions shown in the list, narrowed by the murid filter (empty = all).
+  // Sessions already ticked stay counted even when hidden by the filter.
+  const visibleSessions = useMemo(
+    () =>
+      studentFilter.length === 0
+        ? sessions
+        : sessions.filter((s) => studentFilter.includes(s.studentId)),
+    [sessions, studentFilter],
   );
 
   function toggle(id: string) {
@@ -183,15 +208,29 @@ export function CreateHonorPaymentDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-2">
-            <Label>Sesi yang dibayar ({selected.size} dipilih)</Label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label>Sesi yang dibayar ({selected.size} dipilih)</Label>
+              {studentOptions.length > 1 && (
+                <MultiSelectFilter
+                  options={studentOptions}
+                  selected={studentFilter}
+                  onChange={setStudentFilter}
+                  allLabel="Semua murid"
+                />
+              )}
+            </div>
             <div className="max-h-56 overflow-y-auto rounded-md border">
               {sessions.length === 0 ? (
                 <p className="p-3 text-sm text-muted-foreground">
                   Tidak ada sesi yang belum dibayar.
                 </p>
+              ) : visibleSessions.length === 0 ? (
+                <p className="p-3 text-sm text-muted-foreground">
+                  Tidak ada sesi untuk murid yang dipilih.
+                </p>
               ) : (
                 <ul className="divide-y">
-                  {sessions.map((s) => (
+                  {visibleSessions.map((s) => (
                     <li key={s.id}>
                       <label className="flex cursor-pointer items-center gap-3 p-2.5 text-sm hover:bg-muted/50">
                         <Checkbox

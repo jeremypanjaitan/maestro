@@ -6,6 +6,9 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScheduleCalendar, type CalendarSession } from "@/components/schedule-calendar";
 import { AddSessionDialog } from "@/components/add-session-dialog";
+import { EditSessionDialog } from "@/components/edit-session-dialog";
+import type { SessionRecord } from "@/components/sessions-table";
+import { toDbDate } from "@/lib/domain/dbDate";
 
 type Option = { id: string; name: string };
 
@@ -41,6 +44,17 @@ export function AdminCalendar({
 }: AdminCalendarProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<SessionRecord | null>(null);
+
+  // The edit dialog reuses `SessionRecord` (from the sessions table). A
+  // calendar session carries the same fields except `date`, which the
+  // calendar exposes as a "YYYY-MM-DD" string — convert it back to the
+  // `@db.Date` Date the dialog expects.
+  function openEdit(session: CalendarSession) {
+    setEditTarget({ ...session, date: toDbDate(session.date) });
+    setEditOpen(true);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,12 +84,21 @@ export function AdminCalendar({
           setDate(d);
           setOpen(true);
         }}
+        onEditSession={openEdit}
       />
 
       <AddSessionDialog
         open={open}
         onOpenChange={setOpen}
         defaultDate={date}
+        teachers={teachers}
+        students={students}
+      />
+
+      <EditSessionDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        session={editTarget}
         teachers={teachers}
         students={students}
       />
