@@ -95,16 +95,27 @@ export async function getCalendarSessions({
   }));
 }
 
-/**
- * Sessions for the "Sesi & Absensi" screen: the last 14 days (so a guru can
- * still mark attendance for recently-past sessions) through the next 30
- * days. Scoping to the caller's own teacherId happens inside
- * `getCalendarSessions` — this is just a convenience wrapper with the date
- * window this screen needs.
- */
-export async function getGuruSessions(): Promise<CalendarSession[]> {
+/** Default window for the "Sesi & Absensi" screen: the last 14 days (so a
+ * guru can still mark attendance for recently-past sessions) through the next
+ * 30 days. Exported so the page can seed its Dari/Sampai inputs with the same
+ * range the query defaults to. */
+export function guruSessionsDefaultRange(): { from: string; to: string } {
   const today = todayISO();
-  return getCalendarSessions({ from: addDays(today, -14), to: addDays(today, 30) });
+  return { from: addDays(today, -14), to: addDays(today, 30) };
+}
+
+/**
+ * Sessions for the "Sesi & Absensi" screen, within [from, to] (inclusive) —
+ * defaults to `guruSessionsDefaultRange()` when the caller passes no range.
+ * Scoping to the caller's own teacherId happens inside `getCalendarSessions`;
+ * this is just a convenience wrapper over the date window this screen needs.
+ */
+export async function getGuruSessions(range?: {
+  from: string;
+  to: string;
+}): Promise<CalendarSession[]> {
+  const { from, to } = range ?? guruSessionsDefaultRange();
+  return getCalendarSessions({ from, to });
 }
 
 /**

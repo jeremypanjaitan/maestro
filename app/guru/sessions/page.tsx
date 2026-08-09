@@ -1,27 +1,30 @@
-import Link from "next/link";
-
-import { getGuruSessions, getStudentsForGuru } from "@/lib/queries/calendar";
-import { AttendanceControls } from "@/components/attendance-controls";
-import { GuruAddSessionDialog } from "@/components/guru-add-session-dialog";
-import { PageHeader } from "@/components/page-header";
-import { RescheduleDialog } from "@/components/reschedule-dialog";
-import { ClassTypeBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  getGuruSessions,
+  getStudentsForGuru,
+  guruSessionsDefaultRange,
+} from "@/lib/queries/calendar";
+import { GuruAddSessionDialog } from "@/components/guru-add-session-dialog";
+import { GuruSessionsTable } from "@/components/guru-sessions-table";
+import { PageHeader } from "@/components/page-header";
 
-export default async function GuruSessionsPage() {
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function GuruSessionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
+  const sp = await searchParams;
+  // Date range drives the DB query (default: last 14 days -> next 30 days),
+  // so sessions outside the default window are reachable via Dari/Sampai.
+  const fallback = guruSessionsDefaultRange();
+  const fromISO = sp.from && YMD.test(sp.from) ? sp.from : fallback.from;
+  const toISO = sp.to && YMD.test(sp.to) ? sp.to : fallback.to;
+
   // Scoping to the signed-in guru's own teacherId happens inside
   // getGuruSessions -> getCalendarSessions, re-derived from auth() there.
   const [sessions, students] = await Promise.all([
-    getGuruSessions(),
+    getGuruSessions({ from: fromISO, to: toISO }),
     getStudentsForGuru(),
   ]);
 
@@ -34,65 +37,11 @@ export default async function GuruSessionsPage() {
         <GuruAddSessionDialog students={students} />
       </PageHeader>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Jam</TableHead>
-                  <TableHead>Murid</TableHead>
-                  <TableHead>Instrumen</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sessions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
-                      Belum ada sesi pada rentang ini.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sessions.map((session) => {
-                    const locked = session.status === "RESCHEDULE" || session.status === "CANCEL";
-                    return (
-                      <TableRow key={session.id}>
-                        <TableCell>{session.date}</TableCell>
-                        <TableCell>{session.startTime}</TableCell>
-                        <TableCell className="font-medium">{session.student.name}</TableCell>
-                        <TableCell>{session.instrument}</TableCell>
-                        <TableCell>
-                          <ClassTypeBadge classType={session.classType} />
-                        </TableCell>
-                        <TableCell>
-                          <AttendanceControls sessionId={session.id} status={session.status} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" asChild>
-                              <Link href={`/guru/sessions/${session.id}/report`}>Laporan</Link>
-                            </Button>
-                            <RescheduleDialog
-                              sessionId={session.id}
-                              currentDate={session.date}
-                              currentStartTime={session.startTime}
-                              disabled={locked}
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <GuruSessionsTable
+        sessions={sessions}
+        initialFrom={fromISO}
+        initialTo={toISO}
+      />
     </div>
   );
 }
