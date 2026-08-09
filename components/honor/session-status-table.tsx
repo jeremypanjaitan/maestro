@@ -16,14 +16,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const PAYMENT_OPTIONS = [
+  { value: "paid", label: "Sudah dibayar" },
+  { value: "unpaid", label: "Belum dibayar" },
+];
+
 /**
- * Status Sesi card for the admin honor page. Renders the session-payment
- * status table with a multi-select "Murid" filter (client-side — empty
- * selection means all students). The unpaid count in the title reflects the
- * current filter.
+ * Status Sesi card for the admin + guru honor pages. Renders the
+ * session-payment status table with multi-select "Murid" and "Status bayar"
+ * filters (client-side — empty selection means all). The unpaid count in the
+ * title reflects the current filter. `basePath` decides where a paid row
+ * links for the payment detail (each role has its own route).
  */
-export function SessionStatusTable({ sessions }: { sessions: HonorSessionRow[] }) {
+export function SessionStatusTable({
+  sessions,
+  basePath,
+}: {
+  sessions: HonorSessionRow[];
+  basePath: string;
+}) {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<string[]>([]);
 
   // Distinct students among this teacher's sessions, for the filter options.
   const studentOptions = useMemo(() => {
@@ -38,24 +51,42 @@ export function SessionStatusTable({ sessions }: { sessions: HonorSessionRow[] }
 
   const filtered = useMemo(
     () =>
-      selectedStudents.length === 0
-        ? sessions
-        : sessions.filter((s) => selectedStudents.includes(s.studentId)),
-    [sessions, selectedStudents],
+      sessions.filter((s) => {
+        if (
+          selectedStudents.length > 0 &&
+          !selectedStudents.includes(s.studentId)
+        ) {
+          return false;
+        }
+        // Both selected behaves the same as none selected: no filtering.
+        if (selectedPayment.length > 0) {
+          return selectedPayment.includes(s.paid ? "paid" : "unpaid");
+        }
+        return true;
+      }),
+    [sessions, selectedStudents, selectedPayment],
   );
 
   const unpaidCount = filtered.filter((s) => !s.paid).length;
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between gap-4">
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-4">
         <CardTitle>Status Sesi ({unpaidCount} belum dibayar)</CardTitle>
-        <MultiSelectFilter
-          options={studentOptions}
-          selected={selectedStudents}
-          onChange={setSelectedStudents}
-          allLabel="Semua murid"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <MultiSelectFilter
+            options={studentOptions}
+            selected={selectedStudents}
+            onChange={setSelectedStudents}
+            allLabel="Semua murid"
+          />
+          <MultiSelectFilter
+            options={PAYMENT_OPTIONS}
+            selected={selectedPayment}
+            onChange={setSelectedPayment}
+            allLabel="Semua status bayar"
+          />
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -76,7 +107,7 @@ export function SessionStatusTable({ sessions }: { sessions: HonorSessionRow[] }
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
                     {sessions.length === 0
                       ? "Belum ada sesi untuk guru ini."
-                      : "Tidak ada sesi untuk murid yang dipilih."}
+                      : "Tidak ada sesi yang cocok dengan filter."}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -93,7 +124,7 @@ export function SessionStatusTable({ sessions }: { sessions: HonorSessionRow[] }
                     </TableCell>
                     <TableCell className="text-right">
                       {s.paid && s.paymentId ? (
-                        <Link href={`/admin/honor/${s.paymentId}`} className="inline-block">
+                        <Link href={`${basePath}/${s.paymentId}`} className="inline-block">
                           <StatusBadge label="Sudah dibayar" tone="green" />
                         </Link>
                       ) : (

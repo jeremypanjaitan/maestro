@@ -37,10 +37,12 @@ export type AdminHonorData = {
 };
 
 /** Maps a teacher's sessions (with their honorPaymentItem relation preloaded)
- * into `HonorSessionRow`s, newest first. Shared by admin + guru queries. */
+ * into `HonorSessionRow`s, newest first. Shared by admin + guru queries.
+ * CANCEL sessions are excluded — they carry no honor, so they are noise in
+ * the status table and must never be selectable for a payment. */
 async function loadSessionRows(teacherId: string): Promise<HonorSessionRow[]> {
   const sessions = await prisma.session.findMany({
-    where: { teacherId },
+    where: { teacherId, status: { not: "CANCEL" } },
     orderBy: [{ date: "desc" }, { startTime: "asc" }],
     select: {
       id: true,

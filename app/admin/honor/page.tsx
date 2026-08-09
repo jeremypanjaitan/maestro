@@ -72,7 +72,7 @@ export default async function AdminHonorPage({
             </CardContent>
           </Card>
 
-          <SessionStatusTable sessions={data.sessions} />
+          <SessionStatusTable sessions={data.sessions} basePath="/admin/honor" />
         </>
       )}
     </div>
