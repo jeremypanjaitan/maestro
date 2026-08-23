@@ -118,16 +118,26 @@ export async function getGuruSessions(range?: {
   return getCalendarSessions({ from, to });
 }
 
+export type GuruStudent = {
+  id: string;
+  name: string;
+  instrument: string;
+  level: string | null;
+};
+
 /**
  * The signed-in guru's own students: those linked to them via a schedule or a
- * prior session. Used to populate the guru "Tambah Sesi" dialog. teacherId is
- * re-derived from `auth()`, never trusted from the caller. Returns an empty
- * list for non-guru callers or a guru not linked to a Teacher record.
+ * prior session. Populates both the guru "Tambah Sesi" dialog (which reads
+ * only id/name) and the guru "Murid" list page (which also shows instrument
+ * and level). teacherId is re-derived from `auth()`, never trusted from the
+ * caller. Returns an empty list for non-guru callers or a guru not linked to
+ * a Teacher record.
  *
  * NOTE: this is the read-side mirror of the ownership check enforced by
- * `createGuruSession` — keep the "schedule OR session" link rule in sync.
+ * `createGuruSession` and by `getStudentTimeline`'s GURU branch — keep the
+ * "schedule OR session" link rule in sync across all three.
  */
-export async function getStudentsForGuru(): Promise<{ id: string; name: string }[]> {
+export async function getStudentsForGuru(): Promise<GuruStudent[]> {
   const session = await auth();
   const teacherId = session?.user?.teacherId;
   if (session?.user?.role !== "GURU" || !teacherId) {
@@ -143,7 +153,7 @@ export async function getStudentsForGuru(): Promise<{ id: string; name: string }
       ],
     },
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, instrument: true, level: true },
   });
   return students;
 }

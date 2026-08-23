@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, type AttachmentType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { requireSessionAccess } from "@/lib/actions/session";
+import { requireSessionAccess, type SessionActor } from "@/lib/actions/session";
 import { lessonReportSchema } from "@/lib/validations/lessonReport";
 import {
   base64ByteLength,
@@ -36,8 +36,16 @@ function isNotFoundError(error: unknown): boolean {
 
 function revalidateReport(sessionId: string): void {
   revalidatePath(`/guru/sessions/${sessionId}/report`);
+  revalidatePath(`/admin/sessions/${sessionId}/report`);
   revalidatePath("/guru/sessions");
   revalidatePath("/admin/sessions");
+}
+
+/** The `updatedBy*` fields to write on any edit to a lesson report. Derived
+ * from the actor `requireSessionAccess` already authenticated — never from
+ * caller-supplied input. */
+function auditStamp(actor: SessionActor) {
+  return { updatedByUserId: actor.userId, updatedByRole: actor.role };
 }
 
 /**
@@ -46,6 +54,10 @@ function revalidateReport(sessionId: string): void {
  * SECURITY: ownership is enforced by `requireSessionAccess` (ADMIN: any
  * session; GURU: only sessions where they're the assigned teacher, re
  * -derived from `auth()` — never trusted from the caller).
+ *
+ * AUDIT: stamps `updatedBy*` from the actor `requireSessionAccess` resolved,
+ * never from the caller. Since ADMIN may edit a report a GURU wrote, this is
+ * the only way to tell afterwards who last changed it.
  */
 export async function upsertLessonReport(
   sessionId: string,
@@ -59,11 +71,12 @@ export async function upsertLessonReport(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
   const data = parsed.data;
+  const stamp = auditStamp(access.actor);
 
   const report = await prisma.lessonReport.upsert({
     where: { sessionId },
-    create: { sessionId, ...data },
-    update: { ...data },
+    create: { sessionId, ...data, ...stamp },
+    update: { ...data, ...stamp },
   });
 
   revalidateReport(sessionId);
@@ -130,15 +143,24 @@ export async function addAttachment(
     };
   }
 
-  await prisma.attachment.create({
-    data: {
-      lessonReportId: reportId,
-      type: expectedType,
-      filename: filename.trim(),
-      mimeType,
-      dataBase64,
-    },
-  });
+  await prisma.$transaction([
+    prisma.attachment.create({
+      data: {
+        lessonReportId: reportId,
+        type: expectedType,
+        filename: filename.trim(),
+        mimeType,
+        dataBase64,
+      },
+    }),
+    // Adding documentation is an edit to the report, so it moves
+    // `updatedAt`/`updatedBy` too — otherwise an admin could swap out a
+    // guru's attachments without leaving a trace.
+    prisma.lessonReport.update({
+      where: { id: reportId },
+      data: auditStamp(access.actor),
+    }),
+  ]);
 
   revalidateReport(report.sessionId);
   return { ok: true };
@@ -167,7 +189,16 @@ export async function deleteAttachment(id: string): Promise<AttachmentActionResu
   if (!access.ok) return { ok: false, error: NOT_FOUND_ERROR };
 
   try {
-    await prisma.attachment.delete({ where: { id } });
+    // Removing documentation is an edit to the report — same reasoning as
+    // `addAttachment`: the stamp is what makes an admin deleting a guru's
+    // attachment visible afterwards.
+    await prisma.$transaction([
+      prisma.attachment.delete({ where: { id } }),
+      prisma.lessonReport.update({
+        where: { id: attachment.lessonReportId },
+        data: auditStamp(access.actor),
+      }),
+    ]);
   } catch (error) {
     if (isNotFoundError(error)) {
       return { ok: false, error: NOT_FOUND_ERROR };

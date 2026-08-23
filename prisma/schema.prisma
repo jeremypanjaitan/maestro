@@ -56,6 +56,8 @@ model User {
   role         Role
   teacher      Teacher?
   createdAt    DateTime @default(now())
+
+  lessonReportsUpdated LessonReport[] @relation("LessonReportUpdatedBy")
 }
 
 model Teacher {
@@ -146,6 +148,14 @@ model LessonReport {
   attachments Attachment[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  /// Who last touched this report. Nullable because rows written before the
+  /// audit trail existed carry no author, and because ADMIN may now edit a
+  /// report a GURU originally filled in — `updatedByRole` is what tells the
+  /// two apart in the UI.
+  updatedByUserId String?
+  updatedByRole   Role?
+  updatedBy       User?   @relation("LessonReportUpdatedBy", fields: [updatedByUserId], references: [id])
 }
 
 model Attachment {

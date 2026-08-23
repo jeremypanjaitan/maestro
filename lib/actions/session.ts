@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma, type Session, type SessionStatus } from "@prisma/client";
+import { Prisma, type Role, type Session, type SessionStatus } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,8 +12,13 @@ import { perSessionRate } from "@/lib/domain/rate";
 
 export type SessionActionResult = { ok: true } | { ok: false; error: string };
 
+/** The authenticated actor a granted `requireSessionAccess` belongs to.
+ * Returned so callers that need to stamp an audit trail (see
+ * `lib/actions/lessonReport.ts`) don't have to call `auth()` a second time. */
+export type SessionActor = { userId: string; role: Role };
+
 export type SessionAccessResult =
-  | { ok: true; session: Session }
+  | { ok: true; session: Session; actor: SessionActor }
   | { ok: false; error: string };
 
 export type GenerateSessionsResult =
@@ -60,12 +65,17 @@ export async function requireSessionAccess(sessionId: string): Promise<SessionAc
     return { ok: false, error: "Sesi tidak ditemukan" };
   }
 
+  const userId = authSession.user.id;
+  if (!userId) {
+    return { ok: false, error: "Tidak diizinkan" };
+  }
+
   if (authSession.user.role === "ADMIN") {
-    return { ok: true, session: target };
+    return { ok: true, session: target, actor: { userId, role: "ADMIN" } };
   }
 
   if (authSession.user.role === "GURU" && authSession.user.teacherId === target.teacherId) {
-    return { ok: true, session: target };
+    return { ok: true, session: target, actor: { userId, role: "GURU" } };
   }
 
   return { ok: false, error: "Tidak diizinkan" };

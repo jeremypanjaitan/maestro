@@ -7,6 +7,7 @@ import { formatDbDate } from "@/lib/domain/dbDate";
 import { PageHeader } from "@/components/page-header";
 import { LessonReportForm } from "@/components/lesson-report-form";
 import { AttachmentUploader } from "@/components/attachment-uploader";
+import { ReportAuditLine } from "@/components/report-audit-line";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type SessionReportPageProps = {
@@ -41,7 +42,10 @@ export default async function SessionReportPage({ params }: SessionReportPagePro
     include: {
       student: { select: { name: true } },
       lessonReport: {
-        include: { attachments: { orderBy: { createdAt: "asc" } } },
+        include: {
+          attachments: { orderBy: { createdAt: "asc" } },
+          updatedBy: { select: { name: true } },
+        },
       },
     },
   });
@@ -62,8 +66,19 @@ export default async function SessionReportPage({ params }: SessionReportPagePro
         <CardHeader>
           <CardTitle>Laporan</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           <LessonReportForm sessionId={sessionRecord.id} report={report} />
+
+          {/* Surfaces admin edits to the guru: if an admin corrected this
+              report, the guru sees who and when rather than finding their
+              own text quietly changed. */}
+          {report ? (
+            <ReportAuditLine
+              updatedAt={report.updatedAt}
+              updatedByName={report.updatedBy?.name ?? null}
+              updatedByRole={report.updatedByRole}
+            />
+          ) : null}
         </CardContent>
       </Card>
 

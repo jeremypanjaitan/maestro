@@ -1,22 +1,16 @@
 import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
-import { buildDataUrl } from "@/lib/files";
 import { formatDbDate } from "@/lib/domain/dbDate";
 import { PageHeader } from "@/components/page-header";
 import { SessionStatusBadge } from "@/components/status-badge";
-import { RichText } from "@/components/rich-text";
-import { PhotoViewer } from "@/components/photo-viewer";
+import { LessonReportForm } from "@/components/lesson-report-form";
+import { AttachmentUploader } from "@/components/attachment-uploader";
+import { ReportAuditLine } from "@/components/report-audit-line";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AdminSessionReportPageProps = {
   params: Promise<{ id: string }>;
-};
-
-const TYPE_LABELS: Record<"PHOTO" | "VIDEO" | "AUDIO", string> = {
-  PHOTO: "Foto",
-  VIDEO: "Video",
-  AUDIO: "Audio",
 };
 
 function ReadOnlyField({ label, value }: { label: string; value: string | null | undefined }) {
@@ -32,32 +26,21 @@ function ReadOnlyField({ label, value }: { label: string; value: string | null |
   );
 }
 
-/** Same as `ReadOnlyField`, but for Materi/Catatan: the value is stored as
- * (sanitized-on-render) HTML from the WYSIWYG editor rather than plain
- * text, so it's rendered via `<RichText>` instead of a raw `<p>`. Empty is
- * defined as "no visible text after stripping tags" -- e.g. an editor that
- * was opened and left with just an empty `<p></p>` should still show "—". */
-function RichReadOnlyField({ label, value }: { label: string; value: string | null | undefined }) {
-  const hasContent = Boolean(value && value.replace(/<[^>]*>/g, "").trim().length > 0);
-  return (
-    <div className="grid gap-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      {hasContent ? (
-        <RichText html={value!} className="text-muted-foreground" />
-      ) : (
-        <p className="text-sm text-muted-foreground">—</p>
-      )}
-    </div>
-  );
-}
-
 /**
- * Read-only admin view of a session's lesson report (attendance context +
- * materi/catatan + lampiran). Mirrors `app/guru/sessions/[id]/report/page.tsx`
- * but with no form/uploader -- admins can view what a guru submitted, never
- * edit it here. ADMIN access is already enforced by `app/admin/layout.tsx`;
- * this route intentionally has no per-teacher ownership check since ADMIN
- * may view any session's report.
+ * Admin view of a session's lesson report — editable, mirroring
+ * `app/guru/sessions/[id]/report/page.tsx` so an admin can fill in a report
+ * a guru forgot or correct a mistake, instead of only being able to read it.
+ *
+ * The underlying actions (`upsertLessonReport`, `addAttachment`,
+ * `deleteAttachment`) already permitted ADMIN on any session via
+ * `requireSessionAccess` — only this page was read-only, so switching it to
+ * the shared form components needed no permission changes. Every edit is
+ * stamped with `updatedBy*` and surfaced through `<ReportAuditLine>` on both
+ * this page and the guru's, so an admin edit is never silent.
+ *
+ * ADMIN access is enforced by `app/admin/layout.tsx`; this route
+ * intentionally has no per-teacher ownership check since ADMIN may act on
+ * any session's report.
  */
 export default async function AdminSessionReportPage({ params }: AdminSessionReportPageProps) {
   const { id } = await params;
@@ -68,7 +51,10 @@ export default async function AdminSessionReportPage({ params }: AdminSessionRep
       teacher: { select: { name: true } },
       student: { select: { name: true } },
       lessonReport: {
-        include: { attachments: { orderBy: { createdAt: "asc" } } },
+        include: {
+          attachments: { orderBy: { createdAt: "asc" } },
+          updatedBy: { select: { name: true } },
+        },
       },
     },
   });
@@ -78,11 +64,11 @@ export default async function AdminSessionReportPage({ params }: AdminSessionRep
   }
 
   const report = sessionRecord.lessonReport;
-  const attachments = report?.attachments ?? [];
 
   // Legacy fields (target/result/homework/grade) are only shown when
-  // present -- current reports only collect material + notes, but older
-  // rows may still carry these.
+  // present -- current reports only collect material + notes, so the form
+  // below can't edit these. They stay read-only rather than being dropped,
+  // otherwise older rows would silently lose visible data.
   const legacyFields: Array<{ label: string; value: string | null | undefined }> = [
     { label: "Target", value: report?.target },
     { label: "Hasil", value: report?.result },
@@ -103,65 +89,39 @@ export default async function AdminSessionReportPage({ params }: AdminSessionRep
         <CardHeader>
           <CardTitle>Laporan</CardTitle>
         </CardHeader>
-        <CardContent>
-          {report ? (
-            <div className="flex flex-col gap-4">
-              <RichReadOnlyField label="Materi" value={report.material} />
-              <RichReadOnlyField label="Catatan" value={report.notes} />
+        <CardContent className="flex flex-col gap-4">
+          <LessonReportForm sessionId={sessionRecord.id} report={report} />
+
+          {legacyFields.length > 0 ? (
+            <div className="flex flex-col gap-4 border-t pt-4">
               {legacyFields.map((field) => (
                 <ReadOnlyField key={field.label} label={field.label} value={field.value} />
               ))}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Guru belum mengisi laporan untuk sesi ini.
-            </p>
-          )}
+          ) : null}
+
+          {report ? (
+            <ReportAuditLine
+              updatedAt={report.updatedAt}
+              updatedByName={report.updatedBy?.name ?? null}
+              updatedByRole={report.updatedByRole}
+            />
+          ) : null}
         </CardContent>
       </Card>
 
-      {report ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Lampiran</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {attachments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada lampiran.</p>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {attachments.map((attachment) => {
-                  const url = buildDataUrl(attachment.mimeType, attachment.dataBase64);
-                  return (
-                    <div key={attachment.id} className="flex flex-col gap-2 rounded-lg border p-3">
-                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <span>{TYPE_LABELS[attachment.type]}</span>
-                        <span className="truncate">{attachment.filename}</span>
-                      </div>
-
-                      {attachment.type === "PHOTO" && (
-                        <PhotoViewer
-                          src={url}
-                          alt={attachment.filename}
-                          className="max-h-48 w-full rounded object-cover"
-                        />
-                      )}
-                      {attachment.type === "VIDEO" && (
-                        <video controls className="max-h-48 w-full rounded">
-                          <source src={url} type={attachment.mimeType} />
-                        </video>
-                      )}
-                      {attachment.type === "AUDIO" && (
-                        <audio controls src={url} className="w-full" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lampiran</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AttachmentUploader
+            sessionId={sessionRecord.id}
+            reportId={report?.id ?? null}
+            attachments={report?.attachments ?? []}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

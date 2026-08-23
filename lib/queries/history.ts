@@ -45,10 +45,16 @@ export type StudentTimelineResult =
  *
  * SECURITY: role/teacherId are re-derived from `auth()` on every call, never
  * trusted from the caller. ADMIN may view any student's timeline. GURU may
- * only view a student they actually teach — i.e. a student for whom at
- * least one Session exists with `teacherId === auth().user.teacherId` — so
- * a guru can't page through `/admin/students/{id}/timeline` (or call this
+ * only view a student they actually teach — i.e. a student linked to
+ * `auth().user.teacherId` by at least one Schedule OR one Session — so a
+ * guru can't page through `/admin/students/{id}/timeline` (or call this
  * directly) for someone else's student. Everyone else is denied.
+ *
+ * The schedule-OR-session test deliberately mirrors `getStudentsForGuru`
+ * (`lib/queries/calendar.ts`), which is what populates the guru's own murid
+ * list. Checking only sessions here would 404 a student the guru is listed
+ * as teaching but hasn't had a session with yet (a freshly-created weekly
+ * schedule), so the two must stay in sync.
  */
 export async function getStudentTimeline(studentId: string): Promise<StudentTimelineResult> {
   const authSession = await auth();
@@ -68,8 +74,15 @@ export async function getStudentTimeline(studentId: string): Promise<StudentTime
     if (!authSession.user.teacherId) {
       return { ok: false, error: "Tidak diizinkan" };
     }
-    const taught = await prisma.session.findFirst({
-      where: { studentId, teacherId: authSession.user.teacherId },
+    const teacherId = authSession.user.teacherId;
+    const taught = await prisma.student.findFirst({
+      where: {
+        id: studentId,
+        OR: [
+          { schedules: { some: { teacherId } } },
+          { sessions: { some: { teacherId } } },
+        ],
+      },
       select: { id: true },
     });
     if (!taught) {

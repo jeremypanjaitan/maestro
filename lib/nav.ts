@@ -34,6 +34,7 @@ export const adminNav: NavItem[] = [
 export const guruNav: NavItem[] = [
   { label: "Dashboard", href: "/guru/dashboard", icon: LayoutDashboard },
   { label: "Kalender", href: "/guru/schedule", icon: CalendarRange },
+  { label: "Murid", href: "/guru/students", icon: Users },
   { label: "Sesi & Absensi", href: "/guru/sessions", icon: ClipboardList },
   { label: "Pembayaran Honor", href: "/guru/honor", icon: Wallet },
   { label: "Riwayat", href: "/guru/reports/history", icon: History },
