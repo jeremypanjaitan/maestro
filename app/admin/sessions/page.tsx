@@ -33,7 +33,8 @@ export default async function AdminSessionsPage({
       where: {
         date: { gte: toDbDate(fromISO), lte: toDbDate(toISO) },
       },
-      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      // Riwayat sesi ditampilkan terbaru -> terlama.
+      orderBy: [{ date: "desc" }, { startTime: "desc" }],
       include: {
         teacher: { select: { id: true, name: true } },
         student: { select: { id: true, name: true, instrument: true } },

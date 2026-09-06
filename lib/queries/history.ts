@@ -41,7 +41,7 @@ export type StudentTimelineResult =
 
 /**
  * Fetches a student's full lesson-progress timeline (sessions + report +
- * attachments), ordered oldest to newest.
+ * attachments), ordered newest to oldest.
  *
  * SECURITY: role/teacherId are re-derived from `auth()` on every call, never
  * trusted from the caller. ADMIN may view any student's timeline. GURU may
@@ -81,7 +81,7 @@ export async function getStudentTimeline(studentId: string): Promise<StudentTime
 
   const sessions = await prisma.session.findMany({
     where: { studentId },
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    orderBy: [{ date: "desc" }, { startTime: "desc" }],
     include: {
       teacher: { select: { name: true } },
       lessonReport: {

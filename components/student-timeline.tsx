@@ -13,7 +13,7 @@ type StudentTimelineProps = {
 
 /**
  * Vertical progress timeline for a single student: one card per session,
- * newest at the bottom (entries arrive pre-sorted oldest -> newest from
+ * newest at the top (entries arrive pre-sorted newest -> oldest from
  * `getStudentTimeline`), each showing status, lesson-report fields, and
  * documentation thumbnails.
  */

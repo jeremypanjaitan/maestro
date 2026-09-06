@@ -27,6 +27,10 @@ export type GetCalendarSessionsParams = {
   teacherId?: string;
   /** Admin-only filter; ignored for GURU. */
   studentId?: string;
+  /** Chronological direction of the result. Defaults to "asc" — the calendar
+   * view groups by start time and needs oldest-first. List screens that read
+   * as a history (e.g. guru "Sesi & Absensi") pass "desc". */
+  order?: "asc" | "desc";
 };
 
 /**
@@ -43,6 +47,7 @@ export async function getCalendarSessions({
   to,
   teacherId,
   studentId,
+  order = "asc",
 }: GetCalendarSessionsParams): Promise<CalendarSession[]> {
   const session = await auth();
   if (!session?.user) {
@@ -73,7 +78,7 @@ export async function getCalendarSessions({
 
   const sessions = await prisma.session.findMany({
     where,
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    orderBy: [{ date: order }, { startTime: order }],
     include: {
       teacher: { select: { id: true, name: true } },
       student: { select: { id: true, name: true, instrument: true } },
@@ -107,15 +112,17 @@ export function guruSessionsDefaultRange(): { from: string; to: string } {
 /**
  * Sessions for the "Sesi & Absensi" screen, within [from, to] (inclusive) —
  * defaults to `guruSessionsDefaultRange()` when the caller passes no range.
- * Scoping to the caller's own teacherId happens inside `getCalendarSessions`;
- * this is just a convenience wrapper over the date window this screen needs.
+ * Ordered newest -> oldest: this screen reads as a session history, unlike
+ * the calendar view which needs oldest-first. Scoping to the caller's own
+ * teacherId happens inside `getCalendarSessions`; this is just a convenience
+ * wrapper over the date window this screen needs.
  */
 export async function getGuruSessions(range?: {
   from: string;
   to: string;
 }): Promise<CalendarSession[]> {
   const { from, to } = range ?? guruSessionsDefaultRange();
-  return getCalendarSessions({ from, to });
+  return getCalendarSessions({ from, to, order: "desc" });
 }
 
 /**
