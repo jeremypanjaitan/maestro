@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toDbDate, formatDbDate } from "@/lib/domain/dbDate";
+import { NON_HONOR_STATUSES } from "@/lib/domain/constants";
 import {
   base64ByteLength,
   isAcceptedProofMime,
@@ -124,11 +125,15 @@ export async function createHonorPayment(
     return { ok: false, error: "Guru tidak ditemukan" };
   }
 
-  // Eligible = this teacher's sessions, not already claimed by a payment.
+  // Eligible = this teacher's sessions, honor-bearing (not CANCEL/RESCHEDULE),
+  // and not already claimed by a payment. The status check mirrors the one in
+  // `loadSessionRows` so a stale page or a forged request can't pay for a
+  // session that the UI never offered.
   const candidates = await prisma.session.findMany({
     where: {
       id: { in: sessionIds },
       teacherId,
+      status: { notIn: NON_HONOR_STATUSES },
       honorPaymentItem: { is: null },
     },
     select: { id: true, rate: true },

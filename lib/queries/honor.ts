@@ -3,6 +3,7 @@ import type { ClassType, SessionStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDbDate } from "@/lib/domain/dbDate";
+import { NON_HONOR_STATUSES } from "@/lib/domain/constants";
 
 /** One session row in the "status sesi" table, annotated with whether it has
  * been paid and (if so) which payment covers it. */
@@ -38,11 +39,12 @@ export type AdminHonorData = {
 
 /** Maps a teacher's sessions (with their honorPaymentItem relation preloaded)
  * into `HonorSessionRow`s, newest first. Shared by admin + guru queries.
- * CANCEL sessions are excluded — they carry no honor, so they are noise in
- * the status table and must never be selectable for a payment. */
+ * NON_HONOR_STATUSES (CANCEL, RESCHEDULE) are excluded — they carry no
+ * honor, so they are noise in the status table, must never be selectable for
+ * a payment, and must not inflate the "belum dibayar" count. */
 async function loadSessionRows(teacherId: string): Promise<HonorSessionRow[]> {
   const sessions = await prisma.session.findMany({
-    where: { teacherId, status: { not: "CANCEL" } },
+    where: { teacherId, status: { notIn: NON_HONOR_STATUSES } },
     orderBy: [{ date: "desc" }, { startTime: "asc" }],
     select: {
       id: true,
