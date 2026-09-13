@@ -12,6 +12,7 @@ import {
   validateProofFile,
 } from "@/lib/files";
 import { formatRupiah } from "@/lib/utils";
+import { MultiSelectFilter } from "@/components/multi-select-filter";
 import { SessionStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +35,7 @@ export type SelectableSession = {
   id: string;
   dateStr: string;
   startTime: string;
+  studentId: string;
   studentName: string;
   status: SessionStatus;
   rate: number;
@@ -67,6 +69,7 @@ export function CreateHonorPaymentDialog({
   const [open, setOpen] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [studentFilter, setStudentFilter] = useState<string[]>([]);
   const [amount, setAmount] = useState("");
   const [paidAtISO, setPaidAtISO] = useState("");
   const [note, setNote] = useState("");
@@ -78,12 +81,37 @@ export function CreateHonorPaymentDialog({
   useEffect(() => {
     if (open) {
       setSelected(new Set());
+      setStudentFilter([]);
       setAmount("");
       setPaidAtISO(todayLocalISO());
       setNote("");
       setProofs([]);
     }
   }, [open]);
+
+  const studentOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const s of sessions) byId.set(s.studentId, s.studentName);
+    return Array.from(byId, ([value, label]) => ({ value, label })).sort(
+      (a, b) => a.label.localeCompare(b.label),
+    );
+  }, [sessions]);
+
+  // Empty filter means "all". Sessions hidden by the filter keep their tick —
+  // one payment may cover sessions of several murid.
+  const visibleSessions = useMemo(
+    () =>
+      studentFilter.length === 0
+        ? sessions
+        : sessions.filter((s) => studentFilter.includes(s.studentId)),
+    [sessions, studentFilter],
+  );
+
+  const hiddenSelectedCount = useMemo(
+    () =>
+      selected.size - visibleSessions.filter((s) => selected.has(s.id)).length,
+    [selected, visibleSessions],
+  );
 
   const selectedRateSum = useMemo(
     () =>
@@ -183,15 +211,29 @@ export function CreateHonorPaymentDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-2">
-            <Label>Sesi yang dibayar ({selected.size} dipilih)</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label>Sesi yang dibayar ({selected.size} dipilih)</Label>
+              {studentOptions.length > 1 && (
+                <MultiSelectFilter
+                  options={studentOptions}
+                  selected={studentFilter}
+                  onChange={setStudentFilter}
+                  allLabel="Semua murid"
+                />
+              )}
+            </div>
             <div className="max-h-56 overflow-y-auto rounded-md border">
               {sessions.length === 0 ? (
                 <p className="p-3 text-sm text-muted-foreground">
                   Tidak ada sesi yang belum dibayar.
                 </p>
+              ) : visibleSessions.length === 0 ? (
+                <p className="p-3 text-sm text-muted-foreground">
+                  Tidak ada sesi untuk murid yang dipilih.
+                </p>
               ) : (
                 <ul className="divide-y">
-                  {sessions.map((s) => (
+                  {visibleSessions.map((s) => (
                     <li key={s.id}>
                       <label className="flex cursor-pointer items-center gap-3 p-2.5 text-sm hover:bg-muted/50">
                         <Checkbox
@@ -219,6 +261,12 @@ export function CreateHonorPaymentDialog({
                 </ul>
               )}
             </div>
+            {hiddenSelectedCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {hiddenSelectedCount} sesi terpilih tidak tampil karena filter
+                murid.
+              </p>
+            )}
             {selectedRateSum > 0 && (
               <p className="text-xs text-muted-foreground">
                 Total rate sesi terpilih: {formatRupiah(selectedRateSum)} (acuan
