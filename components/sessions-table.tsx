@@ -210,7 +210,7 @@ export function SessionsTable({
                             <DropdownMenuItem asChild>
                               <Link href={`/admin/sessions/${session.id}/report`}>
                                 <FileText />
-                                Lihat Laporan
+                                Laporan
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => setEditTarget(session)}>

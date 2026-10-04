@@ -37,6 +37,7 @@ function isNotFoundError(error: unknown): boolean {
 function revalidateReport(sessionId: string): void {
   revalidatePath(`/guru/sessions/${sessionId}/report`);
   revalidatePath("/guru/sessions");
+  revalidatePath(`/admin/sessions/${sessionId}/report`);
   revalidatePath("/admin/sessions");
 }
 
