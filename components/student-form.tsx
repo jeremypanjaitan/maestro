@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { StudentStatus } from "@prisma/client";
+import type { StudentStatus, TeacherStatus } from "@prisma/client";
 
 import { createStudent, updateStudent } from "@/lib/actions/student";
 import { INSTRUMENTS, LEVELS } from "@/lib/validations/student";
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { MultiSelectFilter } from "@/components/multi-select-filter";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -36,13 +37,18 @@ export type StudentRecord = {
   level: string | null;
   learningTarget: string | null;
   status: StudentStatus;
+  /** Gurus explicitly assigned to this student. */
+  teacherIds: string[];
 };
+
+export type TeacherOption = { id: string; name: string; status: TeacherStatus };
 
 type StudentFormProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Student to edit, or `null`/`undefined` to create a new one. */
   student?: StudentRecord | null;
+  teachers: TeacherOption[];
 };
 
 const EMPTY_FORM = {
@@ -53,9 +59,15 @@ const EMPTY_FORM = {
   level: "",
   learningTarget: "",
   status: "ACTIVE" as StudentStatus,
+  teacherIds: [] as string[],
 };
 
-export function StudentForm({ open, onOpenChange, student }: StudentFormProps) {
+export function StudentForm({
+  open,
+  onOpenChange,
+  student,
+  teachers,
+}: StudentFormProps) {
   const isEditing = Boolean(student);
   const [form, setForm] = useState(EMPTY_FORM);
   const [isPending, setIsPending] = useState(false);
@@ -73,6 +85,7 @@ export function StudentForm({ open, onOpenChange, student }: StudentFormProps) {
         level: student.level ?? "",
         learningTarget: student.learningTarget ?? "",
         status: student.status,
+        teacherIds: student.teacherIds,
       });
     } else {
       setForm(EMPTY_FORM);
@@ -91,6 +104,7 @@ export function StudentForm({ open, onOpenChange, student }: StudentFormProps) {
       level: form.level,
       learningTarget: form.learningTarget,
       status: form.status,
+      teacherIds: form.teacherIds,
     };
 
     const result = isEditing
@@ -200,6 +214,26 @@ export function StudentForm({ open, onOpenChange, student }: StudentFormProps) {
               }
               placeholder="Contoh: Bisa memainkan 3 lagu dalam 6 bulan"
             />
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Guru</Label>
+            <MultiSelectFilter
+              // Inactive gurus stay listed only if already assigned, so an
+              // existing assignment can still be removed.
+              options={teachers
+                .filter(
+                  (t) => t.status === "ACTIVE" || form.teacherIds.includes(t.id),
+                )
+                .map((t) => ({ value: t.id, label: t.name }))}
+              selected={form.teacherIds}
+              onChange={(teacherIds) => setForm((prev) => ({ ...prev, teacherIds }))}
+              allLabel="Pilih guru (opsional)"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Guru yang dipilih bisa menambah sesi untuk murid ini walau belum ada jadwal.
+            </p>
           </div>
 
           <div className="grid gap-2">

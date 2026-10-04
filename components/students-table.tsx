@@ -34,13 +34,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StudentForm, type StudentRecord } from "@/components/student-form";
+import {
+  StudentForm,
+  type StudentRecord,
+  type TeacherOption,
+} from "@/components/student-form";
 
 type StudentsTableProps = {
   students: StudentRecord[];
+  teachers: TeacherOption[];
 };
 
-export function StudentsTable({ students }: StudentsTableProps) {
+export function StudentsTable({ students, teachers }: StudentsTableProps) {
+  const teacherNames = new Map(teachers.map((t) => [t.id, t.name]));
   const [formOpen, setFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentRecord | null>(null);
   const [toggleTarget, setToggleTarget] = useState<StudentRecord | null>(null);
@@ -96,6 +102,7 @@ export function StudentsTable({ students }: StudentsTableProps) {
                   <TableHead>Kontak</TableHead>
                   <TableHead>Instrumen</TableHead>
                   <TableHead>Level</TableHead>
+                  <TableHead>Guru</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
@@ -103,7 +110,7 @@ export function StudentsTable({ students }: StudentsTableProps) {
               <TableBody>
                 {students.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       Belum ada murid.
                     </TableCell>
                   </TableRow>
@@ -117,6 +124,12 @@ export function StudentsTable({ students }: StudentsTableProps) {
                         <Badge variant="secondary">{student.instrument}</Badge>
                       </TableCell>
                       <TableCell>{student.level ?? "-"}</TableCell>
+                      <TableCell>
+                        {student.teacherIds
+                          .map((id) => teacherNames.get(id))
+                          .filter(Boolean)
+                          .join(", ") || "-"}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={student.status === "ACTIVE" ? "default" : "outline"}>
                           {student.status === "ACTIVE" ? "Aktif" : "Nonaktif"}
@@ -152,7 +165,12 @@ export function StudentsTable({ students }: StudentsTableProps) {
         </CardContent>
       </Card>
 
-      <StudentForm open={formOpen} onOpenChange={setFormOpen} student={editingStudent} />
+      <StudentForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        student={editingStudent}
+        teachers={teachers}
+      />
 
       <AlertDialog
         open={toggleTarget !== null}

@@ -126,13 +126,14 @@ export async function getGuruSessions(range?: {
 }
 
 /**
- * The signed-in guru's own students: those linked to them via a schedule or a
- * prior session. Used to populate the guru "Tambah Sesi" dialog. teacherId is
+ * The signed-in guru's own students: those linked to them via a schedule, a
+ * prior session, or an explicit admin assignment (TeacherStudent). Used to populate the guru "Tambah Sesi" dialog. teacherId is
  * re-derived from `auth()`, never trusted from the caller. Returns an empty
  * list for non-guru callers or a guru not linked to a Teacher record.
  *
  * NOTE: this is the read-side mirror of the ownership check enforced by
- * `createGuruSession` — keep the "schedule OR session" link rule in sync.
+ * `createGuruSession` — keep the "schedule OR session OR assignment" link rule
+ * in sync.
  */
 export async function getStudentsForGuru(): Promise<{ id: string; name: string }[]> {
   const session = await auth();
@@ -147,6 +148,7 @@ export async function getStudentsForGuru(): Promise<{ id: string; name: string }
       OR: [
         { schedules: { some: { teacherId } } },
         { sessions: { some: { teacherId } } },
+        { teachers: { some: { teacherId } } },
       ],
     },
     orderBy: { name: "asc" },

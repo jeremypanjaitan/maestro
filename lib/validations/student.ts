@@ -41,6 +41,9 @@ const learningTarget = z
 
 const status = z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE");
 
+/** Gurus explicitly assigned to this student (TeacherStudent). */
+const teacherIds = z.array(z.string().min(1)).default([]);
+
 /** Schema for creating or updating a student. Student has no linked User account. */
 export const studentSchema = z.object({
   name,
@@ -50,6 +53,7 @@ export const studentSchema = z.object({
   level,
   learningTarget,
   status,
+  teacherIds,
 });
 
 export const createStudentSchema = studentSchema;

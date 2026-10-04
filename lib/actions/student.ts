@@ -29,7 +29,8 @@ function isNotFoundError(error: unknown): boolean {
   );
 }
 
-/** Creates a Student. Unlike Teacher, a Student has no linked User account. */
+/** Creates a Student, plus its guru assignments. Unlike Teacher, a Student has
+ * no linked User account. */
 export async function createStudent(
   input: unknown,
 ): Promise<StudentActionResult> {
@@ -43,12 +44,29 @@ export async function createStudent(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { name, parentName, contact, instrument, level, learningTarget, status } =
-    parsed.data;
+  const {
+    name,
+    parentName,
+    contact,
+    instrument,
+    level,
+    learningTarget,
+    status,
+    teacherIds,
+  } = parsed.data;
 
   try {
     await prisma.student.create({
-      data: { name, parentName, contact, instrument, level, learningTarget, status },
+      data: {
+        name,
+        parentName,
+        contact,
+        instrument,
+        level,
+        learningTarget,
+        status,
+        teachers: { create: teacherIds.map((teacherId) => ({ teacherId })) },
+      },
     });
   } catch (error) {
     if (isNotFoundError(error)) {
@@ -61,7 +79,7 @@ export async function createStudent(
   return { ok: true };
 }
 
-/** Updates a student's profile fields. */
+/** Updates a student's profile fields and guru assignments. */
 export async function updateStudent(
   id: string,
   input: unknown,
@@ -76,13 +94,37 @@ export async function updateStudent(
       error: parsed.error.issues[0]?.message ?? "Data tidak valid",
     };
   }
-  const { name, parentName, contact, instrument, level, learningTarget, status } =
-    parsed.data;
+  const {
+    name,
+    parentName,
+    contact,
+    instrument,
+    level,
+    learningTarget,
+    status,
+    teacherIds,
+  } = parsed.data;
 
   try {
+    // Replace the student's guru assignments with exactly `teacherIds`.
     await prisma.student.update({
       where: { id },
-      data: { name, parentName, contact, instrument, level, learningTarget, status },
+      data: {
+        name,
+        parentName,
+        contact,
+        instrument,
+        level,
+        learningTarget,
+        status,
+        teachers: {
+          deleteMany: { teacherId: { notIn: teacherIds } },
+          createMany: {
+            data: teacherIds.map((teacherId) => ({ teacherId })),
+            skipDuplicates: true,
+          },
+        },
+      },
     });
   } catch (error) {
     if (isNotFoundError(error)) {

@@ -70,6 +70,7 @@ model Teacher {
   sessions      Session[]
   payrolls      Payroll[]
   honorPayments HonorPayment[]
+  students      TeacherStudent[]
   createdAt     DateTime       @default(now())
 }
 
@@ -85,7 +86,21 @@ model Student {
   schedules      Schedule[]
   sessions       Session[]
   payments       StudentPayment[]
+  teachers       TeacherStudent[]
   createdAt      DateTime         @default(now())
+}
+
+// Explicit "this student belongs to this guru" link, set by admin. Lets a guru
+// pick the student in "Tambah Sesi" before any schedule or session exists.
+model TeacherStudent {
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  createdAt DateTime @default(now())
+
+  @@id([teacherId, studentId])
+  @@index([studentId])
 }
 
 model Schedule {

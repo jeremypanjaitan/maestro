@@ -477,10 +477,10 @@ export async function createGuruSession(
     return { ok: false, error: "Tipe kelas tidak valid" };
   }
 
-  // The student must be one of this guru's own students: linked via a schedule
-  // or a prior session with this teacher. Guards against a guru creating a
-  // session for a student they don't teach.
-  const [scheduleLink, sessionLink] = await Promise.all([
+  // The student must be one of this guru's own students: linked via a schedule,
+  // a prior session, or an explicit admin assignment with this teacher. Guards
+  // against a guru creating a session for a student they don't teach.
+  const [scheduleLink, sessionLink, assignmentLink] = await Promise.all([
     prisma.schedule.findFirst({
       where: { teacherId, studentId },
       select: { id: true },
@@ -489,8 +489,12 @@ export async function createGuruSession(
       where: { teacherId, studentId },
       select: { id: true },
     }),
+    prisma.teacherStudent.findUnique({
+      where: { teacherId_studentId: { teacherId, studentId } },
+      select: { teacherId: true },
+    }),
   ]);
-  if (!scheduleLink && !sessionLink) {
+  if (!scheduleLink && !sessionLink && !assignmentLink) {
     return { ok: false, error: "Murid bukan murid Anda" };
   }
 
