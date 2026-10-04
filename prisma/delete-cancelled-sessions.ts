@@ -18,6 +18,8 @@
  *  - sudah tercakup dalam pembayaran honor (HonorPaymentItem) atau payroll
  *    (PayrollItem) — menghapusnya akan mengubah isi pembayaran yang sudah
  *    tercatat;
+ *  - masih membawa pembayaran murid (StudentPaymentItem) — itu "kredit"
+ *    yang harus dipindahkan dulu ke sesi lain lewat halaman Pembayaran Murid;
  *  - menjadi sesi pengganti dari sesi lain yang berstatus RESCHEDULE
  *    (rescheduledToId) — menghapusnya memutus rantai reschedule.
  * Alasan lewatnya selalu dilaporkan agar bisa ditangani manual.
@@ -40,6 +42,7 @@ async function main() {
       lessonReport: { select: { id: true } },
       payrollItem: { select: { id: true } },
       honorPaymentItem: { select: { id: true } },
+      studentPaymentItem: { select: { id: true } },
       rescheduledFrom: { select: { id: true } },
     },
   });
@@ -51,6 +54,7 @@ async function main() {
     const reasons: string[] = [];
     if (row.honorPaymentItem) reasons.push("sudah masuk pembayaran honor");
     if (row.payrollItem) reasons.push("sudah masuk payroll");
+    if (row.studentPaymentItem) reasons.push("kredit pembayaran murid belum dipindah");
     if (row.rescheduledFrom) reasons.push("pengganti dari sesi RESCHEDULE");
     if (reasons.length > 0) skipped.push({ row, reason: reasons.join(", ") });
     else deletable.push(row);

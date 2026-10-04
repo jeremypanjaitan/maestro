@@ -8,6 +8,7 @@ import {
   GraduationCap,
   FileBarChart,
   Wallet,
+  Receipt,
 } from "lucide-react";
 
 export type NavItem = {
@@ -28,6 +29,7 @@ export const adminNav: NavItem[] = [
   { label: "Kalender", href: "/admin/schedules/calendar", icon: CalendarRange },
   { label: "Sesi", href: "/admin/sessions", icon: ClipboardList },
   { label: "Pembayaran Honor", href: "/admin/honor", icon: Wallet },
+  { label: "Pembayaran Murid", href: "/admin/student-payments", icon: Receipt },
   { label: "Laporan", href: "/admin/reports", icon: FileBarChart },
 ];
 

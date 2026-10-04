@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The kwitansi PDF reads its logo + signature from disk (kept out of
+  // `public/` so the signature has no public URL); make sure they ship with
+  // the route's serverless bundle.
+  outputFileTracingIncludes: {
+    "/api/export/kwitansi/[id]": ["./assets/kwitansi/**"],
+  },
   /* config options here */
   experimental: {
     serverActions: {

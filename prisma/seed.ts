@@ -34,6 +34,7 @@ async function main() {
   //    there any) stays stable across re-runs.
   // ---------------------------------------------------------------------
   await prisma.$transaction([
+    prisma.studentPayment.deleteMany(), // items cascade
     prisma.payrollItem.deleteMany(),
     prisma.payroll.deleteMany(),
     prisma.attachment.deleteMany(),

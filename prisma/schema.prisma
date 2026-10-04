@@ -59,32 +59,33 @@ model User {
 }
 
 model Teacher {
-  id             String         @id @default(cuid())
-  name           String
-  instruments    String[]
-  phone          String?
-  status         TeacherStatus  @default(ACTIVE)
-  user           User?          @relation(fields: [userId], references: [id])
-  userId         String?        @unique
-  schedules      Schedule[]
-  sessions       Session[]
-  payrolls       Payroll[]
-  honorPayments  HonorPayment[]
-  createdAt      DateTime       @default(now())
+  id            String         @id @default(cuid())
+  name          String
+  instruments   String[]
+  phone         String?
+  status        TeacherStatus  @default(ACTIVE)
+  user          User?          @relation(fields: [userId], references: [id])
+  userId        String?        @unique
+  schedules     Schedule[]
+  sessions      Session[]
+  payrolls      Payroll[]
+  honorPayments HonorPayment[]
+  createdAt     DateTime       @default(now())
 }
 
 model Student {
-  id             String        @id @default(cuid())
+  id             String           @id @default(cuid())
   name           String
   parentName     String?
   contact        String?
   instrument     String
   level          String?
   learningTarget String?
-  status         StudentStatus @default(ACTIVE)
+  status         StudentStatus    @default(ACTIVE)
   schedules      Schedule[]
   sessions       Session[]
-  createdAt      DateTime      @default(now())
+  payments       StudentPayment[]
+  createdAt      DateTime         @default(now())
 }
 
 model Schedule {
@@ -106,28 +107,29 @@ model Schedule {
 }
 
 model Session {
-  id              String        @id @default(cuid())
-  schedule        Schedule?     @relation(fields: [scheduleId], references: [id])
-  scheduleId      String?
-  teacher         Teacher       @relation(fields: [teacherId], references: [id])
-  teacherId       String
-  student         Student       @relation(fields: [studentId], references: [id])
-  studentId       String
-  date            DateTime      @db.Date
-  startTime       String
-  durationMinutes Int           @default(60)
-  classType       ClassType     @default(PRIVATE)
-  rate            Int           @default(0)
-  packagePrice    Int           @default(0)
-  packageSessions Int           @default(1)
-  status          SessionStatus @default(SCHEDULED)
-  rescheduledTo   Session?      @relation("Reschedule", fields: [rescheduledToId], references: [id])
-  rescheduledToId String?       @unique
-  rescheduledFrom Session?      @relation("Reschedule")
-  lessonReport    LessonReport?
-  payrollItem     PayrollItem?
-  honorPaymentItem HonorPaymentItem?
-  createdAt       DateTime      @default(now())
+  id                 String              @id @default(cuid())
+  schedule           Schedule?           @relation(fields: [scheduleId], references: [id])
+  scheduleId         String?
+  teacher            Teacher             @relation(fields: [teacherId], references: [id])
+  teacherId          String
+  student            Student             @relation(fields: [studentId], references: [id])
+  studentId          String
+  date               DateTime            @db.Date
+  startTime          String
+  durationMinutes    Int                 @default(60)
+  classType          ClassType           @default(PRIVATE)
+  rate               Int                 @default(0)
+  packagePrice       Int                 @default(0)
+  packageSessions    Int                 @default(1)
+  status             SessionStatus       @default(SCHEDULED)
+  rescheduledTo      Session?            @relation("Reschedule", fields: [rescheduledToId], references: [id])
+  rescheduledToId    String?             @unique
+  rescheduledFrom    Session?            @relation("Reschedule")
+  lessonReport       LessonReport?
+  payrollItem        PayrollItem?
+  honorPaymentItem   HonorPaymentItem?
+  studentPaymentItem StudentPaymentItem?
+  createdAt          DateTime            @default(now())
 
   @@index([teacherId, date])
   @@index([studentId, date])
@@ -217,4 +219,33 @@ model HonorPaymentProof {
   mimeType       String
   dataBase64     String       @db.Text
   createdAt      DateTime     @default(now())
+}
+
+/// A payment received FROM a student (tuition) covering a set of their
+/// sessions — past ones (bayar di akhir) or still-SCHEDULED ones (bayar di
+/// awal). Each payment has a sequential receipt number and renders as a
+/// kwitansi PDF. A session is "paid" iff it is referenced by an item.
+model StudentPayment {
+  id        String               @id @default(cuid())
+  number    String               @unique // KW/RM/2026/10/001
+  student   Student              @relation(fields: [studentId], references: [id])
+  studentId String
+  amount    Int // default = jumlah rate sesi, bisa diedit admin
+  paidAt    DateTime             @db.Date
+  note      String?
+  items     StudentPaymentItem[]
+  createdAt DateTime             @default(now())
+
+  @@index([studentId])
+}
+
+model StudentPaymentItem {
+  id               String         @id @default(cuid())
+  studentPayment   StudentPayment @relation(fields: [studentPaymentId], references: [id], onDelete: Cascade)
+  studentPaymentId String
+  /// Ikut pindah ke sesi pengganti saat reschedule; tetap menempel di sesi
+  /// CANCEL sebagai "kredit" sampai admin memindahkannya.
+  session          Session        @relation(fields: [sessionId], references: [id])
+  sessionId        String         @unique // 1 sesi hanya boleh dibayar sekali
+  rateSnapshot     Int
 }

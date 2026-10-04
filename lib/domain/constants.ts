@@ -16,6 +16,9 @@ export const PAID_STATUSES: SessionStatus[] = ['HADIR']
  * Sesi" table and can never be selected for (or claimed by) an honor
  * payment. RESCHEDULE means the meeting was moved — the replacement session
  * is the one that gets paid — so paying for both would double-count it.
+ *
+ * Also the rule for student payments (kwitansi): these sessions can't be
+ * billed to a murid either.
  */
 export const NON_HONOR_STATUSES: SessionStatus[] = ['CANCEL', 'RESCHEDULE']
 

@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 
 async function main() {
   // FK-safe order: child -> parent
+  await prisma.studentPayment.deleteMany(); // items cascade
   await prisma.payrollItem.deleteMany();
   await prisma.payroll.deleteMany();
   await prisma.attachment.deleteMany();

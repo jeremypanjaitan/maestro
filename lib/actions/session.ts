@@ -237,6 +237,7 @@ export async function updateSessionStatus(
 
   revalidatePath("/admin/sessions");
   revalidatePath("/guru/sessions");
+  revalidatePath("/admin/student-payments");
   return { ok: true };
 }
 
@@ -319,10 +320,18 @@ export async function rescheduleSession(
       where: { id: original.id },
       data: { status: "RESCHEDULE", rescheduledToId: newSession.id },
     });
+
+    // A student's payment for this meeting (often paid in advance) follows
+    // it to the replacement session — RESCHEDULE itself is never billable.
+    await tx.studentPaymentItem.updateMany({
+      where: { sessionId: original.id },
+      data: { sessionId: newSession.id },
+    });
   });
 
   revalidatePath("/admin/sessions");
   revalidatePath("/guru/sessions");
+  revalidatePath("/admin/student-payments");
   return { ok: true };
 }
 

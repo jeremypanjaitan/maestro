@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Receipt } from "lucide-react";
 
 import { getStudentTimeline } from "@/lib/queries/history";
 import { PageHeader } from "@/components/page-header";
 import { StudentTimeline } from "@/components/student-timeline";
+import { Button } from "@/components/ui/button";
 
 type StudentTimelinePageProps = {
   params: Promise<{ id: string }>;
@@ -31,7 +34,14 @@ export default async function StudentTimelinePage({ params }: StudentTimelinePag
       <PageHeader
         title={`Riwayat Perkembangan — ${student.name}`}
         description={student.instrument}
-      />
+      >
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/student-payments?studentId=${id}`}>
+            <Receipt className="size-4" />
+            Pembayaran & Kwitansi
+          </Link>
+        </Button>
+      </PageHeader>
 
       <StudentTimeline entries={entries} />
     </div>
