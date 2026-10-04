@@ -16,7 +16,8 @@ function toFilenameSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
+/** `?inline=1` opens the PDF in the browser (preview) instead of downloading. */
+export async function GET(request: Request, { params }: RouteParams) {
   const session = await auth();
 
   if (!session?.user) {
@@ -35,12 +36,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const buffer = await renderKwitansiPdf(payment);
+  const inline = new URL(request.url).searchParams.get("inline") === "1";
+  const disposition = inline ? "inline" : "attachment";
   const filename = `kwitansi-${toFilenameSegment(payment.studentName)}-${toFilenameSegment(payment.number)}.pdf`;
   return new Response(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `${disposition}; filename="${filename}"`,
     },
   });
 }

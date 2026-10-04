@@ -43,6 +43,7 @@ export default async function AdminStudentPaymentsPage({
           <CreateStudentPaymentDialog
             studentId={selectedStudent.id}
             studentName={selectedStudent.name}
+            studentInstrument={selectedStudent.instrument}
             sessions={data.unpaidSessions}
           />
         )}
@@ -113,7 +114,7 @@ export default async function AdminStudentPaymentsPage({
                       <TableHead>Tanggal</TableHead>
                       <TableHead className="text-center">Pertemuan</TableHead>
                       <TableHead className="text-right">Total</TableHead>
-                      <TableHead>Catatan</TableHead>
+                      <TableHead>Keterangan</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -139,7 +140,7 @@ export default async function AdminStudentPaymentsPage({
                             {formatRupiah(p.amount)}
                           </TableCell>
                           <TableCell className="max-w-[16rem] truncate text-muted-foreground">
-                            {p.note ?? "—"}
+                            {p.description ?? p.note ?? "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">

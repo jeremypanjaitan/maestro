@@ -13,10 +13,10 @@ import { MONTH_NAMES_ID, formatRupiah } from "@/lib/utils";
 const ASSET_DIR = path.join(process.cwd(), "assets", "kwitansi");
 
 const SCHOOL_NAME = "Rumah Musik";
-const SCHOOL_TAGLINE = "Kursus & Les Musik";
+const SCHOOL_TAGLINE = "Kursus Musik";
 const CITY = "Jakarta";
 const SIGNER_NAME = "Jeremy Panjaitan";
-const SIGNER_ROLE = "Pengajar";
+const SIGNER_ROLE = "Penyedia Jasa";
 
 const NAVY = "#1b3a5c";
 const MUTED = "#64748b";
@@ -39,9 +39,9 @@ function formatDayDate(dateStr: string): string {
   return `${day}, ${formatLongDate(dateStr)}`;
 }
 
-/** Second line of a row: time, teacher, and why it's special (if it is). */
+/** Second line of a row: time, and why it's special (if it is). */
 function itemSubtitle(it: StudentPaymentDetailItem): string {
-  const parts = [`${it.startTime} · ${it.durationMinutes} menit`, `Guru: ${it.teacherName}`];
+  const parts = [`${it.startTime} · ${it.durationMinutes} menit`];
   if (it.status === "SCHEDULED") parts.push("dijadwalkan");
   if (it.status === "CANCEL") parts.push("dibatalkan — dialihkan ke pertemuan lain");
   if (it.rescheduledFromDateStr) {
@@ -185,9 +185,17 @@ type KwitansiDocumentProps = {
  * one merged cell with the total, like the "paket" layout of the original.
  */
 function KwitansiDocument({ payment, logo, signature }: KwitansiDocumentProps) {
+  const isPackage = payment.description !== null;
+  const meetingTotal = payment.meetingCount ?? payment.items.length;
   const rateSum = payment.items.reduce((sum, it) => sum + it.rateSnapshot, 0);
-  const perRow = rateSum === payment.amount && payment.items.every((it) => it.rateSnapshot > 0);
-  const teachers = Array.from(new Set(payment.items.map((it) => it.teacherName)));
+  const perRow =
+    !isPackage && rateSum === payment.amount && payment.items.every((it) => it.rateSnapshot > 0);
+  const kelasSub = [
+    `${meetingTotal} pertemuan`,
+    payment.classType ? (payment.classType === "GROUP" ? "Group" : "Private") : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const paidAtLong = formatLongDate(payment.paidAtStr);
   const total = formatRupiah(payment.amount);
 
@@ -223,9 +231,7 @@ function KwitansiDocument({ payment, logo, signature }: KwitansiDocumentProps) {
           <View style={styles.card}>
             <Text style={styles.cardLabel}>KELAS</Text>
             <Text style={styles.cardValue}>{payment.studentInstrument}</Text>
-            <Text style={styles.cardSub}>
-              {payment.items.length} pertemuan · Guru: {teachers.join(", ")}
-            </Text>
+            <Text style={styles.cardSub}>{kelasSub}</Text>
           </View>
         </View>
 
@@ -239,14 +245,20 @@ function KwitansiDocument({ payment, logo, signature }: KwitansiDocumentProps) {
         </View>
         <View style={{ flexDirection: "row" }}>
           <View style={{ flex: 1 }}>
+            {isPackage && (
+              <View style={styles.row} wrap={false}>
+                <Text style={styles.colNo}>1</Text>
+                <View style={styles.colItem}>
+                  <Text style={styles.itemTitle}>{payment.description}</Text>
+                  <Text style={styles.itemSub}>Dibayar di awal · {meetingTotal} pertemuan</Text>
+                </View>
+              </View>
+            )}
             {payment.items.map((it, i) => (
               <View key={it.sessionId} style={styles.row} wrap={false}>
                 <Text style={styles.colNo}>{i + 1}</Text>
                 <View style={styles.colItem}>
-                  <Text style={styles.itemTitle}>
-                    {it.meetingNumber ? `Pertemuan ke-${it.meetingNumber} · ` : ""}
-                    {formatDayDate(it.dateStr)}
-                  </Text>
+                  <Text style={styles.itemTitle}>{formatDayDate(it.dateStr)}</Text>
                   <Text style={styles.itemSub}>{itemSubtitle(it)}</Text>
                 </View>
                 {perRow && <Text style={styles.colAmount}>{formatRupiah(it.rateSnapshot)}</Text>}
@@ -256,7 +268,7 @@ function KwitansiDocument({ payment, logo, signature }: KwitansiDocumentProps) {
           {!perRow && (
             <View style={styles.mergedAmount}>
               <Text style={styles.mergedValue}>{total}</Text>
-              <Text style={styles.mergedNote}>({payment.items.length} pertemuan)</Text>
+              <Text style={styles.mergedNote}>({meetingTotal} pertemuan)</Text>
             </View>
           )}
         </View>
@@ -272,7 +284,7 @@ function KwitansiDocument({ payment, logo, signature }: KwitansiDocumentProps) {
         <View style={styles.closing} wrap={false}>
           <Text style={styles.receivedText}>
             Uang sejumlah <Text style={styles.bold}>{total}</Text> telah diterima dengan baik
-            sebagai pembayaran lunas atas les musik untuk pertemuan di atas.
+            sebagai pembayaran lunas atas les musik {isPackage ? "sesuai keterangan" : "untuk pertemuan"} di atas.
           </Text>
           <View style={styles.signBlock}>
             <Text style={styles.signMeta}>

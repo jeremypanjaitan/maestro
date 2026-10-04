@@ -241,15 +241,21 @@ model HonorPaymentProof {
 /// awal). Each payment has a sequential receipt number and renders as a
 /// kwitansi PDF. A session is "paid" iff it is referenced by an item.
 model StudentPayment {
-  id        String               @id @default(cuid())
-  number    String               @unique // KW/RM/2026/10/001
-  student   Student              @relation(fields: [studentId], references: [id])
-  studentId String
-  amount    Int // default = jumlah rate sesi, bisa diedit admin
-  paidAt    DateTime             @db.Date
-  note      String?
-  items     StudentPaymentItem[]
-  createdAt DateTime             @default(now())
+  id           String               @id @default(cuid())
+  number       String               @unique // KW/RM/2026/10/001
+  student      Student              @relation(fields: [studentId], references: [id])
+  studentId    String
+  amount       Int // default = jumlah rate sesi, bisa diedit admin
+  /// Pembayaran paket di awal TANPA sesi: keterangan bebas (mis. "Pembayaran
+  /// les saxophone sesi private untuk 4 pertemuan") + jumlah pertemuan dan
+  /// jenis kelas. Null untuk pembayaran yang menunjuk sesi (items).
+  description  String?
+  meetingCount Int?
+  classType    ClassType?
+  paidAt       DateTime             @db.Date
+  note         String?
+  items        StudentPaymentItem[]
+  createdAt    DateTime             @default(now())
 
   @@index([studentId])
 }

@@ -1,8 +1,8 @@
-import { FileDown } from "lucide-react";
+import { Eye, FileDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-/** Plain link to the kwitansi PDF route — the browser handles the download. */
+/** Preview (opens the PDF in a new tab) + download links for a kwitansi. */
 export function DownloadKwitansiButton({
   paymentId,
   label = "Kwitansi",
@@ -10,12 +10,21 @@ export function DownloadKwitansiButton({
   paymentId: string;
   label?: string;
 }) {
+  const href = `/api/export/kwitansi/${paymentId}`;
   return (
-    <Button variant="outline" size="sm" asChild>
-      <a href={`/api/export/kwitansi/${paymentId}`} download>
-        <FileDown className="size-4" />
-        {label}
-      </a>
-    </Button>
+    <>
+      <Button variant="outline" size="sm" asChild>
+        <a href={`${href}?inline=1`} target="_blank" rel="noopener noreferrer">
+          <Eye className="size-4" />
+          Lihat
+        </a>
+      </Button>
+      <Button variant="outline" size="sm" asChild>
+        <a href={href} download>
+          <FileDown className="size-4" />
+          {label}
+        </a>
+      </Button>
+    </>
   );
 }

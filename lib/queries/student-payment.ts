@@ -1,4 +1,4 @@
-import type { SessionStatus } from "@prisma/client";
+import type { ClassType, SessionStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { formatDbDate } from "@/lib/domain/dbDate";
@@ -20,8 +20,11 @@ export type StudentPaymentRow = {
   number: string;
   paidAtStr: string;
   amount: number;
+  /** Sessions covered, or the package's meeting count when paid in advance. */
   itemCount: number;
   creditCount: number;
+  /** Set for a package paid in advance (no sessions attached). */
+  description: string | null;
   note: string | null;
 };
 
@@ -36,7 +39,7 @@ export type StudentPaymentCredit = {
 };
 
 export type AdminStudentPaymentData = {
-  students: { id: string; name: string }[];
+  students: { id: string; name: string; instrument: string }[];
   selectedStudentId: string | null;
   payments: StudentPaymentRow[];
   unpaidSessions: UnpaidStudentSession[];
@@ -53,7 +56,7 @@ export async function getAdminStudentPaymentData(
 ): Promise<AdminStudentPaymentData> {
   const students = await prisma.student.findMany({
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, instrument: true },
   });
 
   const selected =
@@ -78,6 +81,8 @@ export async function getAdminStudentPaymentData(
         paidAt: true,
         amount: true,
         note: true,
+        description: true,
+        meetingCount: true,
         items: { select: { session: { select: { status: true } } } },
       },
     }),
@@ -87,7 +92,7 @@ export async function getAdminStudentPaymentData(
         status: { notIn: NON_HONOR_STATUSES },
         studentPaymentItem: { is: null },
       },
-      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      orderBy: [{ date: "desc" }, { startTime: "desc" }],
       select: {
         id: true,
         date: true,
@@ -122,9 +127,10 @@ export async function getAdminStudentPaymentData(
       number: p.number,
       paidAtStr: formatDbDate(p.paidAt),
       amount: p.amount,
-      itemCount: p.items.length,
+      itemCount: p.meetingCount ?? p.items.length,
       creditCount: p.items.filter((it) => it.session.status === "CANCEL").length,
       note: p.note,
+      description: p.description,
     })),
     unpaidSessions: unpaid.map((s) => ({
       id: s.id,
@@ -165,6 +171,11 @@ export type StudentPaymentDetail = {
   studentId: string;
   studentName: string;
   studentInstrument: string;
+  /** Package paid in advance: shown as the kwitansi's only row. `items` is
+   * empty in that case. */
+  description: string | null;
+  meetingCount: number | null;
+  classType: ClassType | null;
   paidAtStr: string;
   amount: number;
   note: string | null;
@@ -188,6 +199,9 @@ export async function getStudentPayment(
       paidAt: true,
       amount: true,
       note: true,
+      description: true,
+      meetingCount: true,
+      classType: true,
       student: { select: { id: true, name: true, instrument: true } },
       items: {
         select: {
@@ -253,6 +267,9 @@ export async function getStudentPayment(
     paidAtStr: formatDbDate(payment.paidAt),
     amount: payment.amount,
     note: payment.note,
+    description: payment.description,
+    meetingCount: payment.meetingCount,
+    classType: payment.classType,
     items,
   };
 }
